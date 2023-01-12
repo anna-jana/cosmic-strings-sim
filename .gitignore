@@ -1,0 +1,12 @@
+*.o
+*.out
+*.dat
+*.csv
+*.hi
+*.pyc
+__pycache__
+.ipynb_checkpoints
+*.pdf
+*.png
+*~
+*.swp
