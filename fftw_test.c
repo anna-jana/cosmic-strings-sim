@@ -56,7 +56,7 @@ int main(void) {
         time_dom[i] /= n;
 
     // write output
-    FILE* out = fopen("test.dat", "w");
+    FILE* out = fopen("fftw_test.dat", "w");
     for(int i = 0; i < n; i++)
         fprintf(out, "%lf %lf %lf\n", time[i], cos(time[i]), creal(time_dom[i]));
     fclose(out);
