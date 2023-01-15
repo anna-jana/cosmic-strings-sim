@@ -1,0 +1,40 @@
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{latexsym,amssymb,amsmath,amstext}
+\usepackage{graphicx}
+\usepackage[backend=bibtex, sorting=none]{biblatex}
+\usepackage{subfigure}
+\usepackage{float}
+
+\bibliography{refs}
+
+\begin{document}
+
+\section{Model}
+
+\begin{equation}
+    \mathcal{L} = - \frac{1}{2} ( \partial \phi )^2 + V(\phi)
+\end{equation}
+
+\begin{equation}
+    V(\phi) = \frac{m_r^2}{2 f_a^2}\left( |\phi|^2 - \frac{f_a^2}{2} \right)^2
+\end{equation}
+
+\begin{equation}
+    \phi(x) = \frac{r(x) + f_a}{\sqrt{2}} e^{i a(x) / f_a}
+\end{equation}
+
+\begin{equation}
+    \varrho = T_{00} = \underbrace{\frac{1}{2} \dot{a}^2 + \frac{1}{2} | \nabla a|^2}_{= \varrho_\mathrm{axion}}
+    + \underbrace{ \frac{1}{2} \dot{r}^2 + \frac{1}{2} | \nabla r|^2 + V(r) }_{= \varrho_\mathrm{radion}}
+    + \left(\frac{r^2}{2 f_a^2} + \frac{r}{f_a} \right) (\dot{a}^2 + |\nabla a|^2)
+\end{equation}
+
+\begin{equation}
+    \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi \frac{m_r^2}{f_a^2} \left( |\phi|^2 - \frac{f_a^2}{2} \right) = 0
+\end{equation}
+
+\printbibliography
+
+\end{document}
