@@ -12,8 +12,10 @@ fftw_test:
 
 doc:
 	pdflatex doc.tex
+	bibtex doc
+	pdflatex doc.tex
 
 clean:
-	rm -f *.out *.dat *.o *.pdf *.aux *.log *.xml *blx.bib
+	rm -rf *.out *.dat *.o *.hi __pycache__ *.pyc *.pdf *.aux *.log *.bbl *.blg *.xml *blx.bib
 
 

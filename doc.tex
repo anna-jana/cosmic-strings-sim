@@ -13,6 +13,8 @@
 
 \section{Model}
 
+Based on the paper: \cite{axions_from_strings}.
+
 \begin{equation}
     \mathcal{L} = - \frac{1}{2} ( \partial \phi )^2 + V(\phi)
 \end{equation}
@@ -31,10 +33,81 @@
     + \left(\frac{r^2}{2 f_a^2} + \frac{r}{f_a} \right) (\dot{a}^2 + |\nabla a|^2)
 \end{equation}
 
+using the metric
+\begin{equation}
+    \mathrm{d}s^2 = -\mathrm{d}t^2 + a(t) \mathrm{d} x_i \mathrm{d} x_i
+\end{equation}
+and the Hubble parameter in the radiation domainted era ($\rho \sim a^{-4}$)
+\begin{equation}
+    H = \frac{1}{2t}
+\end{equation}
+$a$ is the scale factor obeying the Friedmann equation
+\begin{equation}
+    2 M_\mathrm{pl}^2 H^2 = \rho_\mathrm{total} = \frac{\pi^2}{30} g_* T^4
+\end{equation}
+
+Equation of Motion from the Lagragian:
 \begin{equation}
     \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi \frac{m_r^2}{f_a^2} \left( |\phi|^2 - \frac{f_a^2}{2} \right) = 0
 \end{equation}
 
+\begin{equation}
+    \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi m_r^2 \left( \frac{|\phi|^2}{f_a^2} - \frac{1}{2} \right) = 0
+\end{equation}
+
+Divide by $m_r^2$ and $f_a$:
+\begin{equation}
+    \frac{\mathrm{d}^2 {\phi}}{\mathrm{d} t^2 f_a m_r^2} + 3 \frac{H}{m_r} \frac{\mathrm{d} \phi}{\mathrm{d} t m_r f_a} - \frac{\nabla^2 \phi}{m_r^2 f_a} + \frac{\phi}{f_a} \left( \frac{ |\phi|^2 } { f_a^2 } - \frac{1}{2} \right) = 0
+\end{equation}
+
+Using the replacements:
+\begin{align}
+    t' &= m_r t \\
+    H' &= H / m_r \\
+    x' &= m_r x \\
+    \phi' &= \phi / f_a
+\end{align}
+
+we find:
+\begin{equation}
+    \frac{\mathrm{d}^2 \phi'}{\mathrm{d} t'^2} + 3 H' \frac{\mathrm{d} \phi'}{\mathrm{d} t'} - \nabla'^2 \phi + \phi' \left( |\phi'|^2 - \frac{1}{2} \right) = 0
+\end{equation}
+
+\begin{equation}
+    \phi'(x') = \frac{r(x)/f_a + 1}{\sqrt{2}} e^{i a(x) / f_a}
+\end{equation}
+
+Define the conformal time $\tau$ such that:
+\begin{equation}
+    \frac{\mathrm{d} \tau}{\mathrm{d} t} = \frac{1}{a(t)}
+\end{equation}
+hence:
+\begin{equation}
+    \frac{\mathrm{d}}{\mathrm{d} t} = \frac{\mathrm{d \tau}}{\mathrm{d} t} \frac{\mathrm{d}}{\mathrm{d} \tau} = \frac{1}{a(t)} \frac{\mathrm{d}}{\mathrm{d} \tau}
+\end{equation}
+
+\begin{align}
+    &\frac{\mathrm{d}^2}{\mathrm{d} t^2} = \frac{\mathrm{d}}{\mathrm{d} t} \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
+    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} t} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
+    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \frac{\mathrm{d}}{\mathrm{d} t} \\
+    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
+    %&= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a^2} \frac{\mathrm{d}^2}{\mathrm{d} \tau^2}
+     &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a^2} \frac{\mathrm{d}^2}{\mathrm{d} \tau^2} + \frac{1}{a} \frac{\mathrm{d} 1/a}{\mathrm{d} \tau} \frac{\mathrm{d}}{\mathrm{d} \tau}
+\end{align}
+
+where
+\begin{equation}
+    \frac{\mathrm{d} 1/a}{\mathrm{d} \tau} = - a' / a^2 = - a \dot{a} / a^2 = - H
+\end{equation}
+
+Now use unprimed quantities and use the prime as the derivative with respect to $\tau$.
+\begin{equation}
+    - 1/a H \phi' + 1/a^2 \phi'' + 3 H / a \phi'
+    - \nabla^2 \phi + \phi \left( |\phi|^2 - \frac{1}{2} \right) = 0
+\end{equation}
+
+
+\newpage
 \printbibliography
 
 \end{document}
