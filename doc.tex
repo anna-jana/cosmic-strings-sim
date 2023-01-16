@@ -87,12 +87,9 @@ hence:
 \end{equation}
 
 \begin{align}
-    &\frac{\mathrm{d}^2}{\mathrm{d} t^2} = \frac{\mathrm{d}}{\mathrm{d} t} \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
-    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} t} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
-    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \frac{\mathrm{d}}{\mathrm{d} t} \\
-    &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau} \\
-    %&= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a^2} \frac{\mathrm{d}^2}{\mathrm{d} \tau^2}
-     &= - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a^2} \frac{\mathrm{d}^2}{\mathrm{d} \tau^2} + \frac{1}{a} \frac{\mathrm{d} 1/a}{\mathrm{d} \tau} \frac{\mathrm{d}}{\mathrm{d} \tau}
+    \frac{\mathrm{d}^2}{\mathrm{d} t^2} = \frac{\mathrm{d}}{\mathrm{d} t} \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} \tau}
+    = - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a} \frac{\mathrm{d}}{\mathrm{d} t} \frac{\mathrm{d}}{\mathrm{d} \tau}
+     = - \frac{\dot{a}}{a^2} \frac{\mathrm{d}}{\mathrm{d} \tau} + \frac{1}{a^2} \frac{\mathrm{d}^2}{\mathrm{d} \tau^2}
 \end{align}
 
 where
@@ -104,6 +101,70 @@ Now use unprimed quantities and use the prime as the derivative with respect to 
 \begin{equation}
     - 1/a H \phi' + 1/a^2 \phi'' + 3 H / a \phi'
     - \nabla^2 \phi + \phi \left( |\phi|^2 - \frac{1}{2} \right) = 0
+\end{equation}
+
+\begin{equation}
+    \frac{\mathrm{d} a(t)}{\mathrm{d} \tau} = \frac{\mathrm{d} t}{\mathrm{d} \tau} \dot{a} = \dot{a} / \frac{\mathrm{d} \tau}{\mathrm{d} t} = \dot{a} / (1 / a(t)) = \dot{a} a
+\end{equation}
+
+\begin{equation}
+    \phi = \psi / a
+\end{equation}
+
+\begin{equation}
+    \frac{\mathrm{d}}{\mathrm{d} \tau} ( \psi / a(t) ) = \frac{\mathrm{d} \psi}{\mathrm{d} \tau} / a(t) - \frac{\mathrm{d} a(t)}{\mathrm{d} \tau} \psi / a^2(t)
+    = \frac{\mathrm{d} \psi}{\mathrm{d} \tau} / a(t) - \dot{a} a \psi / a^2(t)
+    = \psi' / a - \psi H
+\end{equation}
+
+\begin{equation}
+    \frac{d H}{d \tau} = \frac{d t}{d \tau} \frac{d H}{d t} = a (\ddot{a} / a - \dot{a}^2 / a^2) = \ddot{a} - a H^2
+\end{equation}
+
+\begin{equation}
+    \frac{d^2}{d \tau^2} (\psi / a) = \frac{d}{d \tau} (\psi' / a - \psi H)
+    = \psi'' / a - \psi' H - (\psi' H + \psi \frac{d H}{d \tau})
+    = \psi'' / a - 2 \psi' H - \psi ( \ddot{a} - a H^2 )
+\end{equation}
+
+\begin{equation}
+    1/a^2 ( \psi'' / a - 2 \psi' H - \psi ( \ddot{a} - a H^2 ) ) + 2 H / a (\psi' / a - \psi H)
+    - \nabla^2 \psi / a + \psi / a \left( |\psi / a|^2 - \frac{1}{2} \right) = 0
+\end{equation}
+
+\begin{equation}
+    \psi'' / a^3 - 2 \psi' H / a^2 - \psi \ddot{a} / a^2 + \psi H^2 / a
+    + 2 \psi' H / a^2 - 2 H^2 \psi / a
+    - \nabla^2 \psi / a + \psi / a^3 ( |\psi|^2 - \frac{a^2}{2} ) = 0
+\end{equation}
+
+\begin{equation}
+    \psi'' / a^3 - \psi \ddot{a} / a^2 - H^2 \psi / a
+    - \nabla^2 \psi / a + \psi / a^3 ( |\psi|^2 - \frac{a^2}{2} ) = 0
+\end{equation}
+
+\begin{equation}
+    \psi'' + \psi (\underbrace{- \ddot{a} a - H^2 a^2}_{= 0})
+    - \nabla^2 \psi a^2 + \psi ( |\psi|^2 - \frac{a^2}{2} ) = 0
+\end{equation}
+
+\begin{equation}
+    \tilde{x} = x' / a
+\end{equation}
+
+\begin{equation}
+    \psi'' - \tilde{\nabla}^2 \psi + \psi ( |\psi|^2 - \frac{a^2}{2} ) = 0
+\end{equation}
+
+\begin{equation}
+    a = a_1 t^{1/2}
+\end{equation}
+\begin{equation}
+    H = \frac{1}{2t}
+\end{equation}
+
+\begin{equation}
+    \tau(t) = \int_0^t \mathrm{d} t' a^{-1}(t') = \int_0^t \mathrm{d} t' a_1 t^{-1/2} = -2 a_1 t^{1/2}
 \end{equation}
 
 
