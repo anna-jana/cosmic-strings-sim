@@ -3,7 +3,7 @@ default: main
 all: fftw_test main
 
 main:
-	gcc main.c -Wall -std=c99 -pedantic -lm -lfftw3 -g -O3 -o strings.out
+	gcc main.c -Wall -std=c99 -pedantic -lm -lfftw3 -g -O0 -o strings.out
 
 fftw_test:
 	gcc fftw_test.c -Wall -std=c99 -pedantic -lm -lfftw3 -g -O3 -o fftw_test.out
