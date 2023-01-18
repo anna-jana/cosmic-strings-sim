@@ -4,26 +4,19 @@
 
 #include "globals.h"
 
-void write_slice(char* fname) {
-    printf("writing slice to %s\n", fname);
-    FILE* out = fopen(fname, "w");
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            fprintf(out, "%lf+%lfj ", creal(phi[AT(i, j, 0)]), cimag(phi[AT(i, j, 0)]));
-        }
-        fprintf(out, "\n");
-    }
-    fclose(out);
-}
-
 int main(int argc, char* argv[]) {
     init();
-    write_slice("initial_slice.dat");
-    for(i = 0; i < NSTEPS; i++)
+    init_detect_strings();
+    write_slice_xy("initial_slice.dat", 0);
+    for(i = 0; i < NSTEPS; i++) {
         step();
+        compute_axion();
+        detect_strings();
+    }
     printf("\n");
-    write_slice("final_slice.dat");
+    write_slice_xy("final_slice.dat", 0);
     deinit();
+    deinit_detect_strings();
     return EXIT_SUCCESS;
 }
 
