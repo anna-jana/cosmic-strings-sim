@@ -10,7 +10,7 @@
 #include "globals.h"
 // simulation state (global for now, maybe put into struct later)
 double current_conformal_time;
-int i;
+int step;
 fftw_complex *phi, *phi_dot, *phi_dot_dot;
 fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 
@@ -22,7 +22,7 @@ void init(void) {
     srand(42);
 
     current_conformal_time = TAU_START;
-    i = 0;
+    step = 0;
 
     phi = fftw_malloc(sizeof(fftw_complex) * N3);
     phi_dot = fftw_malloc(sizeof(fftw_complex) * N3);
@@ -56,9 +56,8 @@ void deinit(void) {
     free(ks);
 }
 
-void step(void) {
-    printf("\rrunning simulation: step = %i/%i, conformal time = %lf, log = %lf", i+1, NSTEPS, current_conformal_time, TAU_TO_LOG(current_conformal_time));
-    current_conformal_time = TAU_START + i * DELTA;
+void make_step(void) {
+    current_conformal_time = TAU_START + step * DELTA;
 
     // propagate PDE using velocity verlet algorithm
     // update the field ("position")

@@ -32,7 +32,7 @@ void write_slice_xy(char* fname, int iz);
 /****************************** propagator.c *************************/
 /*** spacial discretisation ***/
 // number of grid points in one dimension
-#define N 20
+#define N 100
 // total number
 #define N3 (N*N*N)
 #define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))
@@ -48,7 +48,7 @@ extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 /*** simulation time ***/
 // simulation domain in time in log units
 #define LOG_START 2
-#define LOG_END 4
+#define LOG_END 2.5
 // simulation domain in time in conformal time
 #define TAU_START LOG_TO_TAU(LOG_START)
 #define TAU_END LOG_TO_TAU(LOG_END)
@@ -57,11 +57,11 @@ extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 #define DELTA -1e-2
 #define NSTEPS ((int)(ceil(TAU_SPAN / DELTA)))
 extern double current_conformal_time;
-extern int i;
+extern int step;
 
 /*** initial state generation ***/
 #define FIELD_MAX (1 / sqrt(2))
-#define KMAX 0.3
+#define KMAX 0.1
 extern fftw_complex *hat;
 extern double* ks;
 void random_field(fftw_complex* field);
@@ -69,7 +69,7 @@ void random_field(fftw_complex* field);
 /*** propagation ***/
 void init(void);
 void deinit(void);
-void step(void);
+void make_step(void);
 void compute_next_force(void);
 
 /********************************* string_detection.c ****************************/
@@ -78,15 +78,6 @@ extern double* theta;
 void compute_axion(void);
 
 /*** detect and store strings ***/
-struct StringPoint {
-    double x;
-    double y;
-    double z;
-};
-extern struct StringPoint* strings;
-extern int strings_len;
-extern int strings_capacity;
-
 void init_detect_strings(void);
 void deinit_detect_strings(void);
 void detect_strings(void);
