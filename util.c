@@ -40,6 +40,12 @@ int mod(int a, int b) {
     return ((a % b) + b) % b;
 }
 
+int sign(double x) {
+    if(x > 0.0) return 1;
+    if(x < 0.0) return -1;
+    return 0;
+}
+
 void write_slice_xy(char* fname, int iz) {
     printf("writing slice to %s\n", fname);
     FILE* out = fopen(fname, "w");
