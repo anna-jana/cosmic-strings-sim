@@ -16,6 +16,7 @@ double random_uniform(double min, double max);
 int mod(int a, int b);
 int sign(double x);
 void write_slice_xy(char* fname, int iz);
+void write_field(char* fname);
 
 /*** cosmology functions ***/
 // functions for converting between cosmological variables
@@ -35,7 +36,7 @@ void write_slice_xy(char* fname, int iz);
 /****************************** propagator.c *************************/
 /*** spacial discretisation ***/
 // number of grid points in one dimension
-#define N 100
+#define N 30
 // total number
 #define N3 (N*N*N)
 #define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))

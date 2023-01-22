@@ -25,9 +25,11 @@ FILE* strings_out;
 int not_expanded_list_capacity;
 int not_expanded_list_length;
 struct Index* not_expanded_list;
+char* string_fname = "strings.dat";
 
 void init_detect_strings(void) {
-    strings_out = fopen("strings.dat", "w");
+    printf("INFO: writing strings to %s\n", string_fname);
+    strings_out = fopen(string_fname, "w");
     close_to_string = malloc(sizeof(bool) * N3);
     patch = malloc(sizeof(int) * N3);
     not_expanded_list_capacity = 10;
@@ -71,18 +73,18 @@ static inline bool loop_contains_string(complex double phi1, complex double phi2
 }
 
 static inline bool is_string_at_xy(int ix, int iy, int iz) {
-    return loop_contains_string(phi[AT(ix, iy, iz)], phi[AT(ix + 1, iy, iz)],
-                                phi[AT(ix + 1, iy + 1, iz)], phi[AT(ix, iy + 1, iz)]);
+    return loop_contains_string(phi[CYCLIC_AT(ix, iy, iz)], phi[CYCLIC_AT(ix + 1, iy, iz)],
+                                phi[CYCLIC_AT(ix + 1, iy + 1, iz)], phi[CYCLIC_AT(ix, iy + 1, iz)]);
 }
 
 static inline bool is_string_at_yz(int ix, int iy, int iz) {
-    return loop_contains_string(phi[AT(ix, iy, iz)], phi[AT(ix, iy + 1, iz)],
-                                phi[AT(ix, iy + 1, iz + 1)], phi[AT(ix, iy, iz + 1)]);
+    return loop_contains_string(phi[CYCLIC_AT(ix, iy, iz)], phi[CYCLIC_AT(ix, iy + 1, iz)],
+                                phi[CYCLIC_AT(ix, iy + 1, iz + 1)], phi[CYCLIC_AT(ix, iy, iz + 1)]);
 }
 
 static inline bool is_string_at_zx(int ix, int iy, int iz) {
-    return loop_contains_string(phi[AT(ix, iy, iz)], phi[AT(ix, iy, iz + 1)],
-                                phi[AT(ix + 1, iy, iz + 1)], phi[AT(ix + 1, iy, iz)]);
+    return loop_contains_string(phi[CYCLIC_AT(ix, iy, iz)], phi[CYCLIC_AT(ix, iy, iz + 1)],
+                                phi[CYCLIC_AT(ix + 1, iy, iz + 1)], phi[CYCLIC_AT(ix + 1, iy, iz)]);
 }
 
 void detect_strings(void) {
@@ -99,10 +101,13 @@ void detect_strings(void) {
 
     // group them in the xy plane
 #ifdef DEBUG
-    FILE* patches_out = fopen("patches.dat", "w");
+    char* patches_fname = "patches.dat";
+    FILE* patches_out = fopen(patches_fname, "w");
+    printf("\nINFO: writing patches to %s", patches_fname);
 #endif
     memset(patch, 0, sizeof(int) * N3);
     int patch_count = 1;
+    // TODO: this is not the cache efficient loop order
     for(int iz = 0; iz < N; iz++) {
         // search for next not looked at point which is marked is_close
         for(int ix = 0; ix < N; ix++) {
@@ -202,7 +207,7 @@ void detect_strings(void) {
         }
     }
 #ifdef DEBUG
-    printf("DEBUG: \nnconnections: %i, nbad_connections: %i\n", nconnections, nbad_connections);
+    printf("\nDEBUG: nconnections: %i, nbad_connections: %i", nconnections, nbad_connections);
 #endif
 
     int string_index = 0;

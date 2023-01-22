@@ -47,13 +47,27 @@ int sign(double x) {
 }
 
 void write_slice_xy(char* fname, int iz) {
-    printf("writing slice to %s\n", fname);
+    printf("INFO: writing slice to %s\n", fname);
     FILE* out = fopen(fname, "w");
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < N; j++) {
             fprintf(out, "%lf+%lfj ", creal(phi[AT(i, j, iz)]), cimag(phi[AT(i, j, iz)]));
         }
         fprintf(out, "\n");
+    }
+    fclose(out);
+}
+
+void write_field(char* fname) {
+    printf("\nINFO: writing grid to %s", fname);
+    FILE* out = fopen(fname, "w");
+    for(int iz = 0; iz < N; iz++) {
+        for(int ix = 0; ix < N; ix++) {
+            for(int iy = 0; iy < N; iy++) {
+                fprintf(out, "%lf+%lfj ", creal(phi[AT(ix, iy, iz)]), cimag(phi[AT(ix, iy, iz)]));
+            }
+            fprintf(out, "\n");
+        }
     }
     fclose(out);
 }
