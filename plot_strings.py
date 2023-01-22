@@ -73,6 +73,7 @@ def plot_boxes(boxes):
     plt.show()
 
 # prototype implementation for string detection
+# (string contention method from Moore at al.)
 def crosses_real_axis(phi1, phi2):
     return np.imag(phi1) * np.imag(phi2) < 0
 
@@ -117,10 +118,34 @@ def find_strings_3d_patches(patches):
 labels, labeled = find_strings_3d_patches(patches)
 
 def nearest_neighbor_strings(x, y, z):
-    pass
+    idx = set(range(len(x)))
+    strings = []
+    while idx:
+        first = i = idx.pop()
+        current_string = [i]
+        while True:
+            if not idx:
+                break
+            j = min(idx, key=lambda j:
+                    (x[i] - x[j])**2 +
+                    (y[i] - y[j])**2 +
+                    (z[i] - z[j])**2)
+            idx.remove(j)
+            if j == first:
+                break
+            current_string.append(j)
+            i = j
+        strings.append(current_string)
+    return strings
 
-
-
+strings = nearest_neighbor_strings(x, y, z)
+fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_zlabel("z")
+for string in strings:
+    ax.plot(x[string], y[string], z[string]) # , color="tab:blue")
+plt.show()
 
 
 
