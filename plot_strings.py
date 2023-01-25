@@ -2,8 +2,18 @@ import numpy as np, matplotlib.pyplot as plt
 from scipy.ndimage import label
 from collections import defaultdict
 
+# util functions
+def plot_boxes(boxes):
+    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+    ax.voxels(boxes)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    plt.show()
+
 # TODO: we need to pass parameters between c code and python scripts
 
+#################### load all data output from c code #####################
 patches = np.loadtxt("patches.dat")
 N = int(np.round(np.cbrt(patches.size)))
 patches = patches.reshape(N,N,N)
@@ -22,6 +32,7 @@ for p, q in zip(patch_id, connected):
 field = np.loadtxt("final_field.dat", dtype="complex")
 field = field.reshape(N,N,N)
 
+############################## plot the data ###########################
 def plot_patches():
     fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
     for i in np.unique(patches):
@@ -64,59 +75,7 @@ def plot_compare_field_and_patches(i):
     plt.pcolormesh(patches[i])
     plt.show()
 
-def plot_boxes(boxes):
-    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-    ax.voxels(boxes)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    plt.show()
-
-# prototype implementation for string detection
-# (string contention method from Moore at al.)
-def crosses_real_axis(phi1, phi2):
-    return np.imag(phi1) * np.imag(phi2) < 0
-
-def handedness(phi1, phi2):
-    return np.sign(np.imag(phi1 * np.conj(phi2)))
-
-def loop_contains_string(phi1, phi2, phi3, phi4):
-    loop = (
-        + crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
-        + crosses_real_axis(phi2, phi3) * handedness(phi2, phi3)
-        + crosses_real_axis(phi3, phi4) * handedness(phi3, phi4)
-        + crosses_real_axis(phi4, phi1) * handedness(phi4, phi1)
-    )
-    return np.abs(loop) == 2
-
-def is_string_at(phi):
-    xy = loop_contains_string(phi, np.roll(phi, -1, 0),
-        np.roll(np.roll(phi, -1, 0), -1, 1), np.roll(phi, -1, 1))
-    yz = loop_contains_string(phi, np.roll(phi, -1, 1),
-        np.roll(np.roll(phi, -1, 1), -1, 2), np.roll(phi, -1, 2))
-    zx = loop_contains_string(phi, np.roll(phi, -1, 2),
-        np.roll(np.roll(phi, -1, 2), -1, 0), np.roll(phi, -1, 0))
-    return xy | yz | zx
-
-def find_strings_3d_patches(patches):
-    labeled, nlabels = label(patches != 0, np.ones((3, 3, 3), dtype="int"))
-    # connect patches on opposite sides of the grid
-    # to enforce periodic boundary conditions which
-    # are not respected by the scipy function labels
-    labels = set(range(1, nlabels + 1))
-    for left, right in [(labeled[0, :, :], labeled[-1, :, :]),
-                        (labeled[:, 0, :], labeled[:, -1, :]),
-                        (labeled[:, :, 0], labeled[:, :, -1])]:
-        idx1, idx2 = np.where((left != right) & (left != 0) & (right != 0))
-        patches_left = left[idx1, idx2]
-        patches_right = right[idx1, idx2]
-        for x, y in zip(patches_left, patches_right):
-            labeled[labeled == x] = y
-            labels.remove(x)
-    return labels, labeled
-
-labels, labeled = find_strings_3d_patches(patches)
-
+############### find strings by nearest neighbor search ###############
 def nearest_neighbor_strings(x, y, z):
     idx = set(range(len(x)))
     strings = []
@@ -132,21 +91,129 @@ def nearest_neighbor_strings(x, y, z):
                     (z[i] - z[j])**2)
             idx.remove(j)
             if j == first:
+                print("good")
                 break
             current_string.append(j)
             i = j
         strings.append(current_string)
     return strings
 
-strings = nearest_neighbor_strings(x, y, z)
-fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-ax.set_xlabel("x")
-ax.set_ylabel("y")
-ax.set_zlabel("z")
-for string in strings:
-    ax.plot(x[string], y[string], z[string]) # , color="tab:blue")
-plt.show()
+def nearest_neighbor_strings2(x, y, z):
+    idx = set(range(len(x)))
+    strings = []
+    while idx:
+        i = idx.pop()
+        idx.add(i)
+        current_string = [i]
+        while True:
+            if not idx:
+                print("open string")
+                break
+            j = min(idx, key=lambda j:
+                    (x[i] - x[j])**2 +
+                    (y[i] - y[j])**2 +
+                    (z[i] - z[j])**2 if i != j else np.inf)
+            idx.remove(j)
+            if j == current_string[0]:
+                print("loop")
+                break
+            current_string.append(j)
+            i = j
+        strings.append(current_string)
+    return strings
+
+def test_nn_strings():
+    strings = nearest_neighbor_strings(x, y, z)
+    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    for string in strings:
+        ax.plot(x[string], y[string], z[string]) # , color="tab:blue")
+    plt.show()
+
+############## prototype implementation for string detection ############
+# (string contention method from Moore at al.)
+def crosses_real_axis(phi1, phi2):
+    return np.imag(phi1) * np.imag(phi2) < 0
+
+def handedness(phi1, phi2):
+    return np.sign(np.imag(phi1 * np.conj(phi2)))
+
+def loop_contains_string(phi1, phi2, phi3, phi4):
+    loop = (
+          crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
+        + crosses_real_axis(phi2, phi3) * handedness(phi2, phi3)
+        + crosses_real_axis(phi3, phi4) * handedness(phi3, phi4)
+        + crosses_real_axis(phi4, phi1) * handedness(phi4, phi1)
+    )
+    return np.abs(loop) == 2
+
+def is_string_at(phi):
+    xy = loop_contains_string(phi, np.roll(phi, -1, 0),
+        np.roll(np.roll(phi, -1, 0), -1, 1), np.roll(phi, -1, 1))
+    yz = loop_contains_string(phi, np.roll(phi, -1, 1),
+        np.roll(np.roll(phi, -1, 1), -1, 2), np.roll(phi, -1, 2))
+    zx = loop_contains_string(phi, np.roll(phi, -1, 2),
+        np.roll(np.roll(phi, -1, 2), -1, 0), np.roll(phi, -1, 0))
+    return xy | yz | zx
 
 
+def find_strings_3d_patches(patches):
+    N = patches.shape[0]
+    remaining_idx = {(x, y, z) for x, y, z in zip(*np.where(patches))}
+    patches = []
+    while True:
+        current_patch = set([])
+        not_expanded = set([remaining_idx.pop()])
+        while not_expanded:
+            x, y, z = not_expanded.pop()
+            current_patch.add((x, y, z))
+            for dx in -1,0,1:
+                for dy in -1,0,1:
+                    for dz in -1,0,1:
+                        if not (dx == 0 and dy == 0 and dz == 0):
+                            neighbor_p = (x + dx) % N, (y + dy) % N, (z + dz) % N
+                            if neighbor_p in remaining_idx:
+                                not_expanded.add(neighbor_p)
+                                remaining_idx.remove(neighbor_p)
+        patches.append(current_patch)
+    return patches
+
+#def find_strings_3d_patches(patches):
+#    labeled, nlabels = label(patches != 0, np.ones((3, 3, 3), dtype="int"))
+#    # connect patches on opposite sides of the grid
+#    # to enforce periodic boundary conditions which
+#    # are not respected by the scipy function labels
+#    labels = set(range(1, nlabels + 1))
+#    for left, right in [(labeled[0, :, :], labeled[-1, :, :]),
+#                        (labeled[:, 0, :], labeled[:, -1, :]),
+#                        (labeled[:, :, 0], labeled[:, :, -1])]:
+#        idx1, idx2 = np.where((left != right) & (left != 0) & (right != 0))
+#        patches_left = left[idx1, idx2]
+#        patches_right = right[idx1, idx2]
+#        for x, y in zip(patches_left, patches_right):
+#            labeled[labeled == x] = y
+#            labels.remove(x)
+#    return labels, labeled
+
+def test():
+    ps = is_string_at(field)
+    labels, labeled = find_strings_3d_patches(ps)
+    strings = []
+    for l in labels:
+        ixs, iys, izs = np.where(labeled == l)
+        for string_idxs in nearest_neighbor_strings(ixs, iys, izs):
+            xs, ys, zs = (ixs[string_idxs] * dx, iys[string_idxs] * dx,
+                          izs[string_idxs] * dx)
+            strings.append((xs, ys, zs))
+
+    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    for xs, ys, zs in strings:
+        ax.plot(xs, ys, zs)
+    plt.show()
 
 
