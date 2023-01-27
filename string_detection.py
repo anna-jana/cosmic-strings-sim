@@ -68,30 +68,56 @@ def cyclic_dist_squared(p1, p2, L):
         cyclic_dist_squared_1d(z1, z2, L)
     )
 
-def nearest_neighbor_strings(patch):
+def nearest_neighbor_strings(patch, maximal_distance = 3*2**2, side_length = N, debug = True):
     patch = patch.copy()
     strings = []
     while patch:
+        if debug:
+            print("next string")
         current_string = [patch.pop()]
         while True:
             if not patch:
-                print("open string")
+                if debug:
+                    print("no points left")
+                if len(current_string) >= 2:
+                    if debug:
+                        print("checking distance to first point in string:", dist_beginning, min_d)
+                    dist_beginning = cyclic_dist_squared(current_string[-1], current_string[0], side_length)
+                    if dist_beginning < maximal_distance:
+                        if debug:
+                            print("its close!")
+                            print("loop", len(current_string))
+                        current_string.append(current_string[0])
+                else:
+                    if debug:
+                        print("open string")
                 break
             min_d = np.inf
             min_p = None
             for p in patch:
-                if p == current_string[-1]:
-                    continue
                 if len(current_string) >= 2 and p == current_string[-2]:
                     continue
-                d = cyclic_dist_squared(p, current_string[-1], L)
+                d = cyclic_dist_squared(p, current_string[-1], side_length)
                 if d < min_d:
                     min_d = d
                     min_p = p
-            dist_beginning = cyclic_dist_squared(current_string[-1], current_string[0], L)
-            print(dist_beginning, min_d)
-            if dist_beginning < min_d:
-                print("loop", len(current_string))
+            if debug:
+                print("found closest point to last point in string:", min_d, min_p)
+            if len(current_string) >= 2:
+                dist_beginning = cyclic_dist_squared(current_string[-1], current_string[0], N)
+                if debug:
+                    print("checking distance to first point in string:", dist_beginning, min_d)
+                if dist_beginning < min_d:
+                    if debug:
+                        print("its closer!")
+                        print("loop", len(current_string))
+                    break
+                else:
+                    if debug:
+                        print("not closer")
+            if min_d > maximal_distance:
+                if debug:
+                    print("next closest point to distant: open string", min_d, ">", maximal_distance)
                 break
             patch.remove(min_p)
             current_string.append(min_p)
