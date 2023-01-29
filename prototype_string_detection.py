@@ -76,14 +76,12 @@ def nearest_neighbor_strings(patch, maximal_distance, side_length, min_string_le
                 if len(current_string) >= 2:
                     dist_beginning = cyclic_dist_squared(
                             current_string[-1], current_string[0], side_length)
-                    if dist_beginning < maximal_distance:
+                    if dist_beginning <= maximal_distance:
                         current_string.append(current_string[0])
                 break
             min_d = np.inf
             min_p = None
             for p in patch:
-                if len(current_string) >= 2 and p == current_string[-2]:
-                    continue
                 d = cyclic_dist_squared(p, current_string[-1], side_length)
                 if d < min_d:
                     min_d = d

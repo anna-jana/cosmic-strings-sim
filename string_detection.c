@@ -13,46 +13,64 @@
 #include <string.h>
 #include <stdlib.h>
 #include <complex.h>
+#include <assert.h>
 
 struct Index {
-    int patch;
     int ix, iy, iz;
 };
 
-bool* close_to_string;
-int* patch;
-FILE* strings_out;
-int not_expanded_list_capacity;
-int not_expanded_list_length;
-struct Index* not_expanded_list;
+int points_capacity;
+int points_length;
+struct Index* points;
+
+FILE* out_strings;
 char* string_fname = "strings.dat";
 
+// external interface
 void init_detect_strings(void) {
     printf("INFO: writing strings to %s\n", string_fname);
-    strings_out = fopen(string_fname, "w");
-    close_to_string = malloc(sizeof(bool) * N3);
-    patch = malloc(sizeof(int) * N3);
-    not_expanded_list_capacity = 10;
-    not_expanded_list_length = 0;
-    not_expanded_list = malloc(sizeof(struct Index) * not_expanded_list_capacity);
+    out_strings = fopen(string_fname, "w");
+
+    points_capacity = 2*N;
+    points_length = 0;
+    points = malloc(sizeof(struct Index) * points_capacity);
 }
 
 void deinit_detect_strings(void) {
-    fclose(strings_out);
-    free(close_to_string);
-    free(patch);
-    free(not_expanded_list);
+    fclose(out_strings);
+    free(points);
 }
 
-void add_to_not_expanded_list(struct Index p) {
-    if(not_expanded_list_length >= not_expanded_list_capacity) {
-        not_expanded_list_capacity *= 2;
-        not_expanded_list = realloc(not_expanded_list,
-                sizeof(struct Index) * not_expanded_list_capacity);
+static void group_strings(void);
+static void find_string_points(void);
+
+void detect_strings(void) {
+    find_string_points();
+    group_strings();
+}
+
+// list of points
+static inline void clear_points(void) {
+    points_length = 0;
+}
+
+static inline void add_point(struct Index p) {
+    if(points_length >= points_capacity) {
+        points_capacity *= 2;
+        points = realloc(points, sizeof(struct Index) * points_capacity);
     }
-    not_expanded_list[not_expanded_list_length++] = p;
+    points[points_length++] = p;
 }
 
+static inline void remove_point(int i) {
+    points[i] = points[--points_length];
+}
+
+static inline struct Index pop_point(void) {
+    return points[--points_length];
+}
+
+// detect string in placet
 static inline bool crosses_real_axis(complex double phi1, complex double phi2) {
     return cimag(phi1) * cimag(phi2) < 0;
 }
@@ -87,154 +105,97 @@ static inline bool is_string_at_zx(int ix, int iy, int iz) {
                                 phi[CYCLIC_AT(ix + 1, iy, iz + 1)], phi[CYCLIC_AT(ix + 1, iy, iz)]);
 }
 
-void detect_strings(void) {
-    // find grid points close to strings
+// find grid points close to strings
+static void find_string_points(void) {
+    clear_points();
     for(int ix = 0; ix < N; ix++) {
         for(int iy = 0; iy < N; iy++) {
             for(int iz = 0; iz < N; iz++) {
-                close_to_string[AT(ix, iy, iz)] = is_string_at_xy(ix, iy, iz) ||
-                                                  is_string_at_yz(ix, iy, iz) ||
-                                                  is_string_at_zx(ix, iy, iz);
-            }
-        }
-    }
-
-    // group them in the xy plane
-#ifdef DEBUG
-    char* patches_fname = "patches.dat";
-    FILE* patches_out = fopen(patches_fname, "w");
-    printf("\nINFO: writing patches to %s", patches_fname);
-#endif
-    memset(patch, 0, sizeof(int) * N3);
-    int patch_count = 1;
-    // TODO: this is not the cache efficient loop order
-    for(int iz = 0; iz < N; iz++) {
-        // search for next not looked at point which is marked is_close
-        for(int ix = 0; ix < N; ix++) {
-            for(int iy = 0; iy < N; iy++) {
-                if(close_to_string[AT(ix, iy, iz)] && patch[AT(ix, iy, iz)] == 0) {
-                    int patch_id = patch_count++;
-                    // add to not expanded list
-                    struct Index p = {patch_id, ix, iy, iz};
-                    add_to_not_expanded_list(p);
-                    // while not expanded list is not empty:
-                    while(not_expanded_list_length > 0) {
-                        // take point from not expanded list
-                        struct Index p = not_expanded_list[--not_expanded_list_length];
-                        patch[AT(p.ix, p.iy, p.iz)] = patch_id;
-                        // patch != 0 then the neighbor is already in some patch_list
-                        // expand neightbors and add to not expanded list
-                        // if not marked or not_expanded yet
-                        for(int dix = -1; dix < 2; dix++) {
-                            for(int diy = -1; diy < 2; diy++) {
-                                // neighboring point to p
-                                struct Index q = {
-                                    patch_id,
-                                    mod(p.ix + dix, N),
-                                    mod(p.iy + diy, N),
-                                    p.iz
-                                };
-                                if(!(dix == 0 && diy == 0) && close_to_string[AT(q.ix, q.iy, q.iz)]
-                                        && patch[AT(q.ix, q.iy, q.iz)] == 0) {
-                                    // check if q is already in not_expanded
-                                    bool in_not_expanded = false;
-                                    for(int i = 0; i < not_expanded_list_length; i++) {
-                                        if(not_expanded_list[i].ix == q.ix &&
-                                           not_expanded_list[i].iy == q.iy &&
-                                           not_expanded_list[i].iz == q.iz) {
-                                            in_not_expanded = true;
-                                            break;
-                                        }
-                                    }
-                                    // add to not_expanded if not already in not_expanded
-                                    if(!in_not_expanded) {
-                                        add_to_not_expanded_list(q);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-#ifdef DEBUG
-                fprintf(patches_out, "%i ", patch[AT(ix, iy, iz)]);
-#endif
-            }
-#ifdef DEBUG
-            fprintf(patches_out, "\n");
-#endif
-        }
-    }
-#ifdef DEBUG
-    fclose(patches_out);
-#endif
-
-    // compute centers of patches and their connections
-    int sum_x[patch_count];
-    int sum_y[patch_count];
-    int patch_iz[patch_count];
-    int count[patch_count];
-    int connected[patch_count];
-#ifdef DEBUG
-    int nconnections = 0, nbad_connections = 0;
-#endif
-    for(int i = 1; i < patch_count; i++)
-        sum_x[i] = sum_y[i] = count[i] = connected[i] = 0;
-    for(int iz = 0; iz < N; iz++) {
-        for(int ix = 0; ix < N; ix++) {
-            for(int iy = 0; iy < N; iy++) {
-                int p = patch[AT(ix, iy, iz)];
-                if(p != 0) {
-                    sum_x[p] += ix;
-                    sum_y[p] += iy;
-                    count[p]++;
-                    patch_iz[p] = iz;
-                    int q;
-                    q = patch[AT(ix, iy, mod(iz - 1, N))];
-                    if(q != 0) {
-                        if(connected[p] == 0 || connected[p] == q) {
-                            connected[p] = q;
-#ifdef DEBUG
-                            nconnections++;
-#endif
-                        } else {
-#ifdef DEBUG
-                            nbad_connections++;
-#endif
-                        }
-                    }
+                bool contains_string = is_string_at_xy(ix, iy, iz) ||
+                                       is_string_at_yz(ix, iy, iz) ||
+                                       is_string_at_zx(ix, iy, iz);
+                if(contains_string) {
+                    struct Index idx = {ix, iy, iz};
+                    add_point(idx);
                 }
             }
         }
-    }
-#ifdef DEBUG
-    printf("\nDEBUG: nconnections: %i, nbad_connections: %i", nconnections, nbad_connections);
-#endif
-
-    int string_index = 0;
-    int remaining_patches[patch_count - 1];
-    for(int i = 0; i < patch_count; i++)
-        remaining_patches[i] = i + 1;
-    int remaining_patches_length = patch_count - 1;
-    while(remaining_patches_length > 0) {
-        int current_patch = remaining_patches[--remaining_patches_length];
-        int first_patch_of_string = current_patch;
-        while(true) {
-            double x = dx * sum_x[current_patch] / (double) count[current_patch];
-            double y = dx * sum_y[current_patch] / (double) count[current_patch];
-            double z = patch_iz[current_patch] * dx;
-            fprintf(strings_out, "%i %i %i %i %lf %lf %lf\n",
-                    step, string_index, current_patch, connected[current_patch], x, y, z);
-            int next = connected[current_patch];
-            if(next == first_patch_of_string || next == 0)
-                break;
-            current_patch = next;
-            for(int i = 0; i < remaining_patches_length; i++) {
-                if(remaining_patches[i] == next) {
-                    remaining_patches[i] = remaining_patches[--remaining_patches_length];
-                }
-            }
-
-        }
-        string_index++;
     }
 }
+
+#define MAXIMAL_DISTANCE (3*2*2)
+#define MIN_STRING_LENGTH 3
+
+inline static int cyclic_dist_squared_1d(int x1, int x2) {
+    int d1 = x1 - x2;
+    int d2 = N - x1 + x2;
+    int d3 = N - x2 + x1;
+    d1 *= d1;
+    d2 *= d2;
+    d3 *= d3;
+    if(d1 > d2) {
+        if(d2 > d3) {
+            return d3;
+        } else {
+            return d2;
+        }
+    } else {
+        if(d1 > d3) {
+            return d3;
+        } else {
+            return d1;
+        }
+    }
+}
+
+inline static int cyclic_dist_squared(struct Index i, struct Index j) {
+    return cyclic_dist_squared_1d(i.ix, j.ix) +
+           cyclic_dist_squared_1d(i.iy, j.iy) +
+           cyclic_dist_squared_1d(i.iz, j.iz);
+}
+
+// grouping points into strings
+static void group_strings(void) {
+    int current_string_index = 0;
+    while(points_length > 0) {
+        struct Index initial_point = pop_point();
+        struct Index last_point = initial_point;
+        int current_string_length = 1;
+        while(true) {
+            if(points_length == 0) {
+                if(current_string_length >= 2) {
+                    double dist_beginning = cyclic_dist_squared(
+                            initial_point, last_point);
+                    if(dist_beginning <= MAXIMAL_DISTANCE) {
+                        fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
+                                initial_point.ix, initial_point.iy, initial_point.iz);
+                        current_string_length++;
+                    }
+                }
+            }
+            double min_d = 1.0/0.0;
+            int min_i = -1;
+            for(int i = 0; i < points_length; i++) {
+                double d = cyclic_dist_squared(points[i], last_point);
+                if(d < min_d) {
+                    min_d = d;
+                    min_i = i;
+                }
+            }
+            if(current_string_length >= MIN_STRING_LENGTH) {
+                double dist_beginning = cyclic_dist_squared(
+                        initial_point, points[min_i]);
+                if(dist_beginning < min_d) break;
+            }
+            if(min_d > MAXIMAL_DISTANCE) break;
+            // output
+            last_point = points[min_i];
+            fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
+                    last_point.ix, last_point.iy, last_point.iz);
+            current_string_length++;
+            remove_point(min_i);
+        }
+        current_string_index++;
+    }
+}
+
