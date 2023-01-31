@@ -7,6 +7,7 @@
 #include <fftw3.h>
 
 #define DEBUG
+#define EVERY_ANALYSIS_STEP 10
 
 /******************************** utils.c **************************/
 #define PI 3.14159265358979323846
@@ -15,7 +16,6 @@ double calc_k_max_grid(int n, double d);
 double random_uniform(double min, double max);
 int mod(int a, int b);
 int sign(double x);
-void write_slice_xy(char* fname, int iz);
 void write_field(char* fname);
 
 /*** cosmology functions ***/
@@ -77,13 +77,14 @@ void make_step(void);
 void compute_next_force(void);
 
 /********************************* string_detection.c ****************************/
-/*** compute axion field ***/
-extern double* theta;
-void compute_axion(void);
-
 /*** detect and store strings ***/
 void init_detect_strings(void);
 void deinit_detect_strings(void);
 void detect_strings(void);
+
+/********************************* energy.c *********************************/
+void init_energy_computation(void);
+void deinit_energy_computation(void);
+void compute_energy(void);
 
 #endif // GLOBALS_H

@@ -24,10 +24,6 @@ Based on the paper: \cite{axions_from_strings}.
 \end{equation}
 
 \begin{equation}
-    \phi(x) = \frac{r(x) + f_a}{\sqrt{2}} e^{i a(x) / f_a}
-\end{equation}
-
-\begin{equation}
     \varrho = T_{00} = \underbrace{\frac{1}{2} \dot{a}^2 + \frac{1}{2} | \nabla a|^2}_{= \varrho_\mathrm{axion}}
     + \underbrace{ \frac{1}{2} \dot{r}^2 + \frac{1}{2} | \nabla r|^2 + V(r) }_{= \varrho_\mathrm{radion}}
     + \left(\frac{r^2}{2 f_a^2} + \frac{r}{f_a} \right) (\dot{a}^2 + |\nabla a|^2)
@@ -71,10 +67,6 @@ Using the replacements:
 we find:
 \begin{equation}
     \frac{\mathrm{d}^2 \phi'}{\mathrm{d} t'^2} + 3 H' \frac{\mathrm{d} \phi'}{\mathrm{d} t'} - \nabla'^2 \phi + \phi' \left( |\phi'|^2 - \frac{1}{2} \right) = 0
-\end{equation}
-
-\begin{equation}
-    \phi'(x') = \frac{r(x)/f_a + 1}{\sqrt{2}} e^{i a(x) / f_a}
 \end{equation}
 
 Define the conformal time $\tau$ such that:
@@ -167,6 +159,99 @@ Now use unprimed quantities and use the prime as the derivative with respect to 
     \tau(t) = \int_0^t \mathrm{d} t' a^{-1}(t') = \int_0^t \mathrm{d} t' a_1 t^{-1/2} = -2 a_1 t^{1/2}
 \end{equation}
 
+\begin{equation}
+    \phi_\mathrm{physical} = f_a \phi_\mathrm{simulation} / a(t)
+\end{equation}
+
+From now on we call $\psi$ $\phi'$.
+\begin{equation}
+    \phi= \phi' / (a(t) f_a)
+\end{equation}
+
+\section{Decomposition}
+\begin{equation}
+    \phi(x) = \frac{r(x) + f_a}{\sqrt{2}} e^{i \varphi(x) / f_a }
+\end{equation}
+
+\section{Energies}
+
+\begin{equation}
+    \mathcal{H} =
+    \underbrace{\frac{1}{2} \dot{\varphi}^2 + \frac{1}{2} (\nabla \varphi)^2}_{= \mathrm{axion}} +
+    \underbrace{\frac{1}{2} \dot{r}^2 + \frac{1}{2} (\nabla r)^2 + V(r)}_{= \mathrm{radial}} +
+    \underbrace{\left( \frac{r^2}{f_a^2} + 2 \frac{r}{f_a} \right) \left( \frac{1}{2} \dot{\varphi}^2 + \frac{1}{2} (\nabla \varphi)^2 \right)}_{= \mathrm{interaction}}
+\end{equation}
+
+\subsection{Axion:}
+
+\begin{equation}
+    \varphi = f_a \theta = f_a \arg(\phi_\mathrm{physical}) = f_a \arg(\phi_\mathrm{simulation})
+\end{equation}
+
+\begin{align}
+    &\frac{1}{2} \dot{\varphi}^2 = \frac{1}{2} f_a^2 \dot{\theta}^2
+    = \frac{1}{2} f_a^2 \left( \frac{\mathrm{d} \theta}{\mathrm{d} t} \right)^2
+    = \frac{1}{2} f_a^2 \left( \frac{\mathrm{d} \theta}{\mathrm{d} t' / m_r} \right)^2 \\
+    &= \frac{1}{2} f_a^2 m_r^2 \left( \frac{\mathrm{d} \tau}{\mathrm{d} t'} \frac{\mathrm{d} \theta}{\mathrm{d} \tau} \right)^2
+    = \frac{1}{2} f_a^2 m_r^2 \left( \frac{1}{a(t)} \frac{\mathrm{d} \theta}{\mathrm{d} \tau} \right)^2
+    = \frac{1}{2} \left( \frac{f_a m_r}{a(t)} \right)^2 \left( \partial_\tau \theta \right)^2
+\end{align}
+
+\begin{align}
+ &\frac{1}{2} (\nabla \varphi)^2 =
+ \frac{1}{2} f_a^2 \sum_i \left(\frac{\partial \theta}{\partial x_i}\right)^2 = \\
+ &\frac{1}{2} f_a^2 \sum_i \left(\frac{\partial \theta}{\partial x'_i / m_r}\right)^2 =
+ \frac{1}{2} f_a^2 m_r^2 \sum_i \left(\frac{\partial \theta}{\partial x'_i}\right)^2 =
+ \frac{1}{2} f_a^2 m_r^2 (\nabla' \theta)^2
+\end{align}
+
+\subsection{Radial Mode:}
+
+\begin{equation}
+    \phi(x) = \frac{r(x) + f_a}{\sqrt{2}} e^{i \theta(x) }
+\end{equation}
+
+\begin{equation}
+    r = \sqrt{2} |\phi| - f_a
+    = \sqrt{2} f_a |\phi'| / a(t) - f_a
+    = f_a \left( \sqrt{2} |\phi'| / a(t) - 1 \right)
+    \equiv f_a r'
+\end{equation}
+
+\begin{equation}
+    |\phi| = \frac{r - f_a}{\sqrt{2}}
+\end{equation}
+
+\begin{equation}
+    r' = r / f_a = \sqrt{2} |\phi'| / a(t) - 1
+\end{equation}
+
+\begin{equation}
+    \frac{1}{2} \dot{r}^2 = \frac{1}{2} (\frac{\partial}{\partial t} r)^2
+    = \frac{1}{2} (\frac{f_a m_r}{a(t)})^2 \left( \partial_\tau r' \right)^2
+\end{equation}
+
+\begin{equation}
+    \frac{1}{2} (\nabla r)^2 = \frac{1}{2} f_a^2 m_r^2 ( \nabla' r')^2
+\end{equation}
+
+\begin{equation}
+    V(\phi) = \frac{m_r^2}{2 f_a^2}\left( |\phi|^2 - \frac{f_a^2}{2} \right)^2
+\end{equation}
+
+\begin{align}
+    &V(\phi) = V(|\phi|) = V(\frac{r - f_a}{\sqrt{2}})
+    = V \left(f_a \left( \frac{r' - 1}{\sqrt{2}} \right) \right) \\
+    &= \frac{m_r^2}{2 f_a^2}\left( \left(f_a \left( \frac{r' - 1}{\sqrt{2}} \right) \right)^2 - \frac{f_a^2}{2} \right)^2 \\
+    &= m_r^2 f_a^2 / 8 ( (r' - 1)^2 - 1)
+    = m_r^2 f_a^2 / 8 ( r'^2 - 2 r' )^2
+\end{align}
+
+\subsection{Interaction:}
+\begin{equation}
+\left( \frac{r^2}{f_a^2} + 2 \frac{r}{f_a} \right) \left( \frac{1}{2} \dot{\varphi}^2 + \frac{1}{2} (\nabla \varphi)^2 \right)
+= f_a^2 m_r^2 (r'^2 + 2 r) \left( \frac{1}{2} (\partial_\tau \theta )^2 + \frac{1}{2} (\nabla' \theta)^2 \right)
+\end{equation}
 
 \newpage
 \printbibliography

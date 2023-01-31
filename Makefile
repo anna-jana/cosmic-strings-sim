@@ -16,4 +16,9 @@ doc:
 clean:
 	rm -rf *.out *.dat *.o *.hi __pycache__ *.pyc *.pdf *.aux *.log *.bbl *.blg *.xml *blx.bib
 
+pyenv:
+	conda create -n cosmic-strings python=3.10 numpy scipy matplotlib ipython pyfftw h5py
+
+analysis: pyenv
+	python analysis.py
 
