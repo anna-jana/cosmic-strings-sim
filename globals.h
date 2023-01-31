@@ -24,7 +24,7 @@ void write_field(char* fname);
 #define LOG_TO_H(LOG) (1/exp(LOG))
 #define H_TO_T(H) (1 / (2*(H)))
 #define T_TO_H(T) (1 / (2*(T)))
-#define H_TO_LOG(H) (log(1/H))
+#define H_TO_LOG(H) (log(1/(H)))
 #define T_TO_TAU(T) (-2*sqrt(T))
 #define LOG_TO_TAU(LOG) (T_TO_TAU(H_TO_T(LOG_TO_H(LOG))))
 #define T_TO_A(T) (sqrt(T))
@@ -46,6 +46,7 @@ void write_field(char* fname);
 // L/N not L/(N-1) bc we have cyclic boundary conditions
 // *...*...* N = 2, dx = L / N
 #define dx (L/N)
+#define dx2 (dx*dx)
 extern fftw_complex *phi, *phi_dot, *phi_dot_dot;
 extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 

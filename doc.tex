@@ -205,6 +205,11 @@ From now on we call $\psi$ $\phi'$.
  \frac{1}{2} f_a^2 m_r^2 (\nabla' \theta)^2
 \end{align}
 
+\begin{equation}
+    \partial_\tau \theta = \partial_\tau \arg(\phi) = \partial_\tau \arctan \left( \frac{ \Im \phi }{ \Re \phi } \right)
+    = \frac{ \frac{ \partial_\tau \Im \phi }{ \Re \phi } - \frac{ \Im \phi \cdot \partial_\tau}{(\Re \phi)^2}}{ 1 - \left( \frac{\Im \phi}{\Re \phi} \right)^2}
+\end{equation}
+
 \subsection{Radial Mode:}
 
 \begin{equation}
@@ -245,6 +250,20 @@ From now on we call $\psi$ $\phi'$.
     &= \frac{m_r^2}{2 f_a^2}\left( \left(f_a \left( \frac{r' - 1}{\sqrt{2}} \right) \right)^2 - \frac{f_a^2}{2} \right)^2 \\
     &= m_r^2 f_a^2 / 8 ( (r' - 1)^2 - 1)
     = m_r^2 f_a^2 / 8 ( r'^2 - 2 r' )^2
+\end{align}
+
+\begin{align}
+    \partial_\tau r' = \partial_\tau f_a \left( \sqrt{2} |\phi'| / a - 1 \right)
+    &= f_a \sqrt{2} \partial_\tau ( |\phi'| / a ) \\
+    &= f_a \sqrt{2} (\partial_\tau |\phi'| / a - \partial_\tau a |\phi'| / a^2) \\
+    &= f_a \sqrt{2} (\partial_\tau |\phi'| / a + 0.5 |\phi'| / a^2)
+\end{align}
+
+\begin{align}
+    \partial_\tau |\phi| &= \partial_\tau \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } \\
+                         &= \frac{ \partial_\tau ((\Re \phi)^2 + (\Im \phi)^2) }{ 2 \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } } \\
+                         &= \frac{ 2 \Re \phi \partial_\tau \Re \phi + 2 \Im \phi \partial_\tau \Im \phi }{ 2 \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } } \\
+                         &= \frac{ \Re \phi \partial_\tau \Re \phi + \Im \phi \partial_\tau \Im \phi }{ |\phi| }
 \end{align}
 
 \subsection{Interaction:}
