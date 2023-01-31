@@ -2,11 +2,12 @@
 [x] propgatation algorithm
 [x] plot slices
 [~] string detection
-[~] string plotting
+[x] string plotting
 [ ] string length and loop size distribution
 [ ] shared memory paralism
 [ ] distributed memory paralism
-[ ] compute energy components
+[x] compute energy components
+[ ] make some constants parameters (defines -> global variables)
 [ ] compute spectrum
 [ ] compute instantaeous spectrum
 [ ] compute gamme factor for strings

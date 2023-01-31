@@ -47,10 +47,11 @@ void compute_energy(void) {
                 double R_dot = creal(phi_dot[AT(ix, iy, iz)]);
                 double I_dot = cimag(phi_dot[AT(ix, iy, iz)]);
                 double R2 = R*R;
+                double I2 = Im*Im;
 
                 // axion
                 // kinetic
-                double d_theta_d_tau = I_dot / R - Im * R_dot / R2;
+                double d_theta_d_tau = (I_dot * R - Im * R_dot) / (R2 - I2);
                 double axion_kinetic = 0.5 / a2 * d_theta_d_tau * d_theta_d_tau;
                 // gradient
                 double diff_theta_x = theta[CYCLIC_AT(ix + 1, iy, iz)] - theta[CYCLIC_AT(ix - 1, iy, iz)];
@@ -79,7 +80,7 @@ void compute_energy(void) {
                 double r = radial[AT(ix, iy, iz)];
                 double r2 = r*r;
                 double inner = r2 - 2.0*r;
-                double radial_potential = radial_potential * radial_potential / 8.0;
+                double radial_potential = inner * inner / 8.0;
 
                 // interaction
                 double interaction = inner * (axion_kinetic + axion_gradient);

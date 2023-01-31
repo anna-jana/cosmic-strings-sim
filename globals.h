@@ -7,7 +7,7 @@
 #include <fftw3.h>
 
 #define DEBUG
-#define EVERY_ANALYSIS_STEP 10
+#define EVERY_ANALYSIS_STEP 1
 
 /******************************** utils.c **************************/
 #define PI 3.14159265358979323846
@@ -53,7 +53,7 @@ extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 /*** simulation time ***/
 // simulation domain in time in log units
 #define LOG_START 2
-#define LOG_END 2.5
+#define LOG_END 3.0
 // simulation domain in time in conformal time
 #define TAU_START LOG_TO_TAU(LOG_START)
 #define TAU_END LOG_TO_TAU(LOG_END)
