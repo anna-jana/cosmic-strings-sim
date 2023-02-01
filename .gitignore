@@ -2,6 +2,7 @@
 *.out
 *.dat
 *.csv
+*.json
 *.hi
 *.pyc
 __pycache__

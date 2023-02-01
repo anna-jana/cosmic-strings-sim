@@ -30,8 +30,16 @@ def tau_to_a(tau):
 def tau_to_log(tau):
     return H_to_log(t_to_H(tau_to_t(tau)))
 
-log_start = 2
-log_end = 2.5
+import json
+
+with open("parameter.json", "r") as f:
+    parameter = json.load(f)
+
+log_start = parameter["LOG_START"]
+log_end = parameter["LOG_END"]
+L = parameter["L"]
+N = parameter["N"]
+dtau = parameter["DELTA"]
+
 tau_start = log_to_tau(log_start)
 tau_end = log_to_tau(log_end)
-dtau = -1e-2

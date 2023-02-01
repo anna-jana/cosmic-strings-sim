@@ -9,6 +9,17 @@ int main(int argc, char* argv[]) {
     init();
     init_detect_strings();
     init_energy_computation();
+
+    FILE* out = fopen(PARAMETER_FILENAME, "w");
+    fprintf(out, "{\n");
+    fprintf(out, "\"L\": %lf,\n", L);
+    fprintf(out, "\"LOG_START\": %lf,\n", LOG_START);
+    fprintf(out, "\"LOG_END\": %lf,\n", LOG_END);
+    fprintf(out, "\"N\": %i,\n", N);
+    fprintf(out, "\"DELTA\": %lf\n", DELTA);
+    fprintf(out, "}\n");
+    fclose(out);
+
     for(step = 0; step < NSTEPS; step++) {
         double l = TAU_TO_LOG(current_conformal_time);
         double H = 1/exp(l);

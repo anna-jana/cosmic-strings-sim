@@ -16,9 +16,8 @@ for step_used in np.unique(step):
 tau = cosmology.tau_start + np.array(steps) * cosmology.dtau
 log = cosmology.tau_to_log(tau)
 
-L = 1.0
 t = cosmology.tau_to_t(tau)
-zeta = np.array(lengths) / L**3 * t**2
+zeta = np.array(lengths) / cosmology.L**3 * t**2
 
 # I think this is not right
 

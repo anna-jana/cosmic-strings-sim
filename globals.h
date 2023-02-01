@@ -9,6 +9,16 @@
 #define DEBUG
 #define EVERY_ANALYSIS_STEP 1
 
+// parameters
+// simulation domain in time in log units
+#define L 1.0 // comoving length of the simulation box in units of 1/m_r
+#define LOG_START 2.0
+#define LOG_END 3.0
+#define N 30 // number of grid points in one dimension
+#define DELTA -1e-2
+
+#define PARAMETER_FILENAME "parameter.json"
+
 /******************************** utils.c **************************/
 #define PI 3.14159265358979323846
 double* fft_freq(int n, double d);
@@ -35,14 +45,12 @@ void write_field(char* fname);
 
 /****************************** propagator.c *************************/
 /*** spacial discretisation ***/
-// number of grid points in one dimension
-#define N 30
+// for N see parameters, number of grid points in one dimension
 // total number
 #define N3 (N*N*N)
 #define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))
 #define CYCLIC_AT(ix, iy, iz) AT(mod(ix, N), mod(iy, N), mod(iz, N))
-// comoving length of the simulation box in units of 1/m_r
-#define L 1.0
+// for L see parameters, comoving length of the simulation box in units of 1/m_r
 // L/N not L/(N-1) bc we have cyclic boundary conditions
 // *...*...* N = 2, dx = L / N
 #define dx (L/N)
@@ -51,15 +59,13 @@ extern fftw_complex *phi, *phi_dot, *phi_dot_dot;
 extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 
 /*** simulation time ***/
-// simulation domain in time in log units
-#define LOG_START 2
-#define LOG_END 3.0
 // simulation domain in time in conformal time
+// for LOG_START and LOG_END see parameters
 #define TAU_START LOG_TO_TAU(LOG_START)
 #define TAU_END LOG_TO_TAU(LOG_END)
 #define TAU_SPAN ((TAU_END) - (TAU_START))
 // discretisation (DELTA is negative because the conformal time is decreasing
-#define DELTA -1e-2
+// for DELTA see parameters
 #define NSTEPS ((int)(ceil(TAU_SPAN / DELTA)))
 extern double current_conformal_time;
 extern int step;

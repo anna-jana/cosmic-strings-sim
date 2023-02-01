@@ -6,7 +6,7 @@ from collections import defaultdict
 field = np.loadtxt("final_field.dat", dtype="complex")
 N = int(np.round(np.cbrt(field.size)))
 field = field.reshape(N,N,N)
-L = 1.0
+from cosmology import L
 dx = L / N
 
 # (string contention method from Moore at al.)
