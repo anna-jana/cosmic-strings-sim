@@ -1,4 +1,5 @@
 import numpy as np
+import json
 
 def log_to_H(log):
     return 1/np.exp(log)
@@ -30,8 +31,6 @@ def tau_to_a(tau):
 def tau_to_log(tau):
     return H_to_log(t_to_H(tau_to_t(tau)))
 
-import json
-
 with open("parameter.json", "r") as f:
     parameter = json.load(f)
 
@@ -43,3 +42,28 @@ dtau = parameter["DELTA"]
 
 tau_start = log_to_tau(log_start)
 tau_end = log_to_tau(log_end)
+dx = L / N
+
+# lets say we want to simulat until this log
+final_log = log_end # cosmology.log_end
+# where
+# log = log(m_r / H)
+
+# minial length required for the simulation to contain one hubble patch at the end of the simulation
+# during the simulation it contains more than one (a patch is smaller)
+L_min = 1 / log_to_H(final_log)
+
+# we need at least one grid point at the end of the simulation in a string core i.e. 1/m_r or 1 in 1/m_r (code) units
+# our spacial coordinates are comoving, hence the physical lattice spacing:
+# dx_physical = dx_comoving * a(t)
+# dx_comoving = L / N
+# 1 / dx_physical > 1
+# dx_physical < 1
+# dx_comoving * a(t) < 1
+# L / N * a(t) < 1
+# L * a(t) < N
+# has to hold for all t and is the tightest for larger a, i.e. log_end
+# N_min = L * a(log_end)
+N_min = L_min * tau_to_a(log_to_tau(final_log))
+
+# print(f"for final log = {final_log = } we need at least {L_min = } and {N_min = }")
