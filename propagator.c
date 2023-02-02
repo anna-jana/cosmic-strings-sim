@@ -19,7 +19,7 @@ fftw_complex *hat;
 double* ks;
 
 void init(void) {
-    srand(42);
+    srand(SEED);
 
     current_conformal_time = TAU_START;
     step = 0;
@@ -32,7 +32,10 @@ void init(void) {
     next_phi_dot_dot = fftw_malloc(sizeof(fftw_complex) * N3);
     hat = fftw_malloc(sizeof(fftw_complex) * N3);
 
-    assert(KMAX >= 0.0 && KMAX <= 1.0);
+    double kmax_grid = calc_k_max_grid(N, dx);
+    printf("kmax_grid: %lf, KMAX: %lf\n", kmax_grid, KMAX);
+    fflush(stdout);
+    assert(KMAX >= 0.0 && KMAX <= kmax_grid);
     ks = fft_freq(N, dx);
     random_field(phi);
     random_field(phi_dot);
@@ -86,7 +89,6 @@ void make_step(void) {
 
 // generate random complex field with strings
 void random_field(fftw_complex* field) {
-    double kmax_grid = calc_k_max_grid(N, dx);
     for(int ix = 0; ix < N; ix++) {
         for(int iy = 0; iy < N; iy++) {
             for(int iz = 0; iz < N; iz++) {
@@ -94,7 +96,7 @@ void random_field(fftw_complex* field) {
                 double ky = ks[iy];
                 double kz = ks[iz];
                 double k = sqrt(kx*kx + ky*ky + kz*kz);
-                if(k <= KMAX*kmax_grid) {
+                if(k <= KMAX) {
                     hat[AT(ix, iy, iz)] =
                         random_uniform(- FIELD_MAX, FIELD_MAX);
                 } else {

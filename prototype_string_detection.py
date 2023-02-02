@@ -2,12 +2,9 @@
 import numpy as np, matplotlib.pyplot as plt
 from scipy.ndimage import label
 from collections import defaultdict
-
-field = np.loadtxt("final_field.dat", dtype="complex")
-N = int(np.round(np.cbrt(field.size)))
-field = field.reshape(N,N,N)
-from cosmology import L
-dx = L / N
+import sys
+import cosmology
+from cosmology import N, L, dx
 
 # (string contention method from Moore at al.)
 def crosses_real_axis(phi1, phi2):
@@ -33,26 +30,6 @@ def is_string_at(phi):
     zx = loop_contains_string(phi, np.roll(phi, -1, 2),
         np.roll(np.roll(phi, -1, 2), -1, 0), np.roll(phi, -1, 0))
     return xy | yz | zx
-
-def find_string_points(phi):
-    xs = np.linspace(0, L-dx, N)
-    xx, yy, zz = np.meshgrid(xs, xs, xs)
-    xy = loop_contains_string(phi, np.roll(phi, -1, 0),
-        np.roll(np.roll(phi, -1, 0), -1, 1), np.roll(phi, -1, 1))
-    yz = loop_contains_string(phi, np.roll(phi, -1, 1),
-        np.roll(np.roll(phi, -1, 1), -1, 2), np.roll(phi, -1, 2))
-    zx = loop_contains_string(phi, np.roll(phi, -1, 2),
-        np.roll(np.roll(phi, -1, 2), -1, 0), np.roll(phi, -1, 0))
-    coord = np.where(xy)
-    x_xy, y_xy, z_xy = xx[coord] + dx/2, yy[coord] + dx/2, zz[coord]
-    coord = np.where(yz)
-    x_yz, y_yz, z_yz = xx[coord], yy[coord] + dx/2, zz[coord] + dx/2
-    coord = np.where(zx)
-    x_zx, y_zx, z_zx = xx[coord] + dx/2, yy[coord], zz[coord] + dx/2
-    x = np.hstack([x_xy, x_yz, x_zx])
-    y = np.hstack([y_xy, y_yz, y_zx])
-    z = np.hstack([z_xy, z_yz, z_zx])
-    return set(zip(x, y, z))
 
 def cyclic_dist_squared_1d(x1, x2, D):
     return min((x1 - x2)**2, (D - x1 + x2)**2, (D - x2 + x1)**2)
@@ -98,14 +75,19 @@ def nearest_neighbor_strings(patch, maximal_distance, side_length, min_string_le
         strings.append(current_string)
     return strings
 
-def plot(strings, size):
-    max_dist = 3*(size / 4)**2
+def plot(strings, size, scale, step=None):
+    max_dist = 3*(scale * size / 4)**2
     fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
+    ax.set_xlim(0, size*scale)
+    ax.set_ylim(0, size*scale)
+    ax.set_zlim(0, size*scale)
+    if step:
+        ax.set_title(f"$\\tau = {step*cosmology.dtau}$")
     for string in strings:
-        x, y, z = np.array(string).T
+        x, y, z = np.array(string).T * scale
         last = 0
         color = None
         for i in range(1, len(x)):
@@ -117,10 +99,18 @@ def plot(strings, size):
     plt.show()
 
 if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        fname = sys.argv[1]
+    elif len(sys.argv) == 1:
+        fname = "final_field.dat"
+    else:
+        raise ValueError("more then one argument")
+    field = np.loadtxt(fname, dtype="complex")
+    field = field.reshape(N, N, N)
     is_close = is_string_at(field)
     ix, iy, iz = np.where(is_close)
     patch = set(zip(ix, iy, iz))
     # we can also do this with the actual coordinates (everything times dx)
     # but this requiures passing min_string_len = 3 bc of rounding issues (I think)
-    strings = nearest_neighbor_strings(patch, 3*(2)**2, N)
-    plot(strings, N)
+    strings = nearest_neighbor_strings(patch, 3*(2)**2, cosmology.N)
+    plot(strings, N, cosmology.dx)

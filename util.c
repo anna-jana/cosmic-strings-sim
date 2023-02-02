@@ -47,7 +47,7 @@ int sign(double x) {
 }
 
 void write_field(char* fname) {
-    printf("\nINFO: writing grid to %s", fname);
+    printf("\nINFO: writing grid to %s\n", fname);
     FILE* out = fopen(fname, "w");
     for(int iz = 0; iz < N; iz++) {
         for(int ix = 0; ix < N; ix++) {
@@ -57,6 +57,18 @@ void write_field(char* fname) {
             fprintf(out, "\n");
         }
     }
+    fclose(out);
+}
+
+void output_parameters(void) {
+    FILE* out = fopen(PARAMETER_FILENAME, "w");
+    fprintf(out, "{\n");
+    fprintf(out, "\"L\": %lf,\n", L);
+    fprintf(out, "\"LOG_START\": %lf,\n", LOG_START);
+    fprintf(out, "\"LOG_END\": %lf,\n", LOG_END);
+    fprintf(out, "\"N\": %i,\n", N);
+    fprintf(out, "\"DELTA\": %lf\n", DELTA);
+    fprintf(out, "}\n");
     fclose(out);
 }
 
