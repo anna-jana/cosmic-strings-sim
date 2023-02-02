@@ -25,7 +25,7 @@ double* fft_freq(int n, double d) {
 // calculate the maximal frequency (in our case wavenumber) on the grid
 double calc_k_max_grid(int n, double d) {
     if(n % 2 == 0) {
-        return 2 * PI * (n / 2 - 1) / (d*n);
+        return 2 * PI * (n / 2) / (d*n);
     } else {
         return 2 * PI * ((n - 1) / 2) / (d*n);
     }
@@ -46,13 +46,13 @@ int sign(double x) {
     return 0;
 }
 
-void write_field(char* fname) {
+void write_field(char* fname, complex double* field) {
     printf("\nINFO: writing grid to %s\n", fname);
     FILE* out = fopen(fname, "w");
     for(int iz = 0; iz < N; iz++) {
         for(int ix = 0; ix < N; ix++) {
             for(int iy = 0; iy < N; iy++) {
-                fprintf(out, "%lf+%lfj ", creal(phi[AT(ix, iy, iz)]), cimag(phi[AT(ix, iy, iz)]));
+                fprintf(out, "%lf+%lfj ", creal(field[AT(ix, iy, iz)]), cimag(field[AT(ix, iy, iz)]));
             }
             fprintf(out, "\n");
         }

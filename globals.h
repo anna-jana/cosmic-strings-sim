@@ -39,7 +39,7 @@ int sign(double x);
 #define TAU_TO_A(TAU) (-0.5*TAU)
 #define TAU_TO_LOG(TAU) H_TO_LOG(T_TO_H(TAU_TO_T(TAU)))
 
-void write_field(char* fname);
+void write_field(char* fname, complex double* field);
 #define PARAMETER_FILENAME "parameter.json"
 void output_parameters(void);
 
@@ -91,9 +91,14 @@ void init_detect_strings(void);
 void deinit_detect_strings(void);
 void detect_strings(void);
 
-/********************************* energy.c *********************************/
+/************************************* energy.c *********************************/
 void init_energy_computation(void);
 void deinit_energy_computation(void);
 void compute_energy(void);
+
+/************************************* spectrum.c *******************************/
+void init_compute_spectrum(void);
+void deinit_compute_spectrum(void);
+void compute_spectrum(void);
 
 #endif // GLOBALS_H
