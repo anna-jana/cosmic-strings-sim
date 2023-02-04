@@ -1,6 +1,6 @@
 import numpy as np, matplotlib.pyplot as plt
 from scipy.fft import fftn, fftfreq
-import cosmology
+import cosmology, prototype_string_detection
 from cosmology import N, dx, L
 
 phi = np.reshape(np.loadtxt("final_field.dat", dtype="complex"), (N, N, N))
@@ -46,3 +46,11 @@ plt.show()
 
 # TODO: this spectrum is contaminated by initial axions and strings!!!!
 # TODO: implement string screening
+
+string = prototype_string_detection.is_string_at(phi)
+
+
+
+
+
+

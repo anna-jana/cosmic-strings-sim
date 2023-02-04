@@ -20,7 +20,7 @@ pyenv:
 	conda create -n cosmic-strings python=3.10 numpy scipy matplotlib ipython pyfftw h5py
 
 cdeps:
-	sudo apt install gcc make valgrid gdb libfftw3-dev
+	sudo apt install gcc make valgrid gdb libfftw3-dev mpich
 
 analysis: pyenv
 	python analysis.py

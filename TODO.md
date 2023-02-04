@@ -17,3 +17,4 @@
 [ ] higher order stecil for laplacian
 [ ] low level optimization
 [ ] GPU code?
+[ ] output in a newly created directory and python analysis scripts take the directory as an argument
