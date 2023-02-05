@@ -17,3 +17,4 @@ __pycache__
 *.log
 *.xml
 *blx.bib
+*.npy

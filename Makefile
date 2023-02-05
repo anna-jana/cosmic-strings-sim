@@ -17,7 +17,7 @@ clean:
 	rm -rf *.out *.dat *.o *.hi __pycache__ *.pyc *.pdf *.aux *.log *.bbl *.blg *.xml *blx.bib
 
 pyenv:
-	conda create -n cosmic-strings python=3.10 numpy scipy matplotlib ipython pyfftw h5py
+	conda create -n cosmic-strings python=3.10 numpy scipy matplotlib ipython pyfftw h5py numba
 
 cdeps:
 	sudo apt install gcc make valgrid gdb libfftw3-dev mpich
