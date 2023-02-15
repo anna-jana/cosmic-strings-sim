@@ -80,8 +80,7 @@ static inline int handedness(complex double phi1, complex double phi2) {
     return sign(cimag(phi1 * conj(phi2)));
 }
 
-static inline bool loop_contains_string(complex double phi1, complex double phi2,
-                                   complex double phi3, complex double phi4) {
+static inline bool loop_contains_string(complex double phi1, complex double phi2, complex double phi3, complex double phi4) {
     const int loop = (
         + crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
         + crosses_real_axis(phi2, phi3) * handedness(phi2, phi3)
@@ -157,6 +156,9 @@ inline static int cyclic_dist_squared(struct Index i, struct Index j) {
 
 // grouping points into strings
 static void group_strings(void) {
+    if(step == NSTEPS - 1) {
+        printf("\n\npoints count: %i\n\n", points_length);
+    }
     int current_string_index = 0;
     while(points_length > 0) {
         struct Index initial_point = pop_point();
@@ -186,9 +188,9 @@ static void group_strings(void) {
             if(current_string_length >= MIN_STRING_LENGTH) {
                 double dist_beginning = cyclic_dist_squared(
                         initial_point, points[min_i]);
-                if(dist_beginning < min_d) break;
+                if(dist_beginning < min_d) break; // loop
             }
-            if(min_d > MAXIMAL_DISTANCE) break;
+            if(min_d > MAXIMAL_DISTANCE) break; // open string
             // output
             last_point = points[min_i];
             fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,

@@ -105,3 +105,15 @@ if __name__ == "__main__":
     strings = nearest_neighbor_strings(patch, 3*(2)**2, data.N)
     plot(strings, data.N, data.dx)
     plt.show()
+
+    # consitency check between this python implementation and the c version
+    last = int(data.string_step[-1])
+    mask = data.string_step == last
+    # data from c code
+    ix2, iy2, iz2 = data.string_x[mask].astype("int"), data.string_y[mask].astype("int"), data.string_z[mask].astype("int")
+    ps = set(zip(ix2, iy2, iz2))
+    inter = ps.intersection(patch)
+    if ps != patch:
+        print(len(inter))
+        print(r"c \ py", ps.difference(patch))
+        print(r"py \ c", patch.difference(ps))

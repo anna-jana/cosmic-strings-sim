@@ -19,8 +19,8 @@ class OutputDir:
         self.tau_end = cosmology.log_to_tau(self.log_end)
         self.dx = self.L / self.N
 
-        self.final_field = np.loadtxt(self.create_output_path("final_field.dat"), dtype="complex").reshape(self.N, self.N, self.N)
-        self.final_field_dot = np.loadtxt(self.create_output_path("final_field_dot.dat"),  dtype="complex").reshape(self.N, self.N, self.N)
+        self.final_field = self.load_field("final_field.dat")
+        self.final_field_dot = self.load_field("final_field_dot.dat")
 
         self.string_step, self.string_id, self.string_x, self.string_y, self.string_z = \
                 np.loadtxt(self.create_output_path("strings.dat")).T
@@ -31,5 +31,10 @@ class OutputDir:
 
     def create_output_path(self, fname):
         return os.path.join(self.dirname, fname)
+
+    def load_field(self, fname):
+        field = np.loadtxt(self.create_output_path(fname), dtype="complex")
+        return field.ravel().reshape(self.N, self.N, self.N).transpose(2,1,0)
+
 
 
