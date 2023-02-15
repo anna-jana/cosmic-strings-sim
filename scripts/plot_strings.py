@@ -1,15 +1,13 @@
 import numpy as np, matplotlib.pyplot as plt
-import sys
-import string_detection, cosmology
+import string_detection, load_data
 
-assert len(sys.argv) == 2
-step_used = int(sys.argv[1])
+def plot(step_used):
+    string_list = []
+    for i in np.unique(load_data.string_id[load_data.string_step == step_used]):
+        mask = (load_data.string_step == step_used) & (load_data.string_id == i)
+        string_list.append(list(zip(load_data.string_x[mask], load_data.string_y[mask], load_data.string_z[mask])))
+    string_detection.plot(string_list, load_data.N, load_data.dx, step=step_used)
 
-step, string_id, x, y, z = np.loadtxt("strings.dat").T
-
-string_list = []
-for i in np.unique(string_id[step == step_used]):
-    mask = (step == step_used) & (string_id == i)
-    string_list.append(list(zip(x[mask], y[mask], z[mask])))
-
-string_detection.plot(string_list, cosmology.N, cosmology.dx, step=step_used)
+plot(load_data.string_step[0])
+plot(load_data.string_step[-1])
+plt.show()

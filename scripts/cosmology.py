@@ -1,5 +1,4 @@
 import numpy as np
-import json
 
 def log_to_H(log):
     return 1/np.exp(log)
@@ -31,21 +30,8 @@ def tau_to_a(tau):
 def tau_to_log(tau):
     return H_to_log(t_to_H(tau_to_t(tau)))
 
-with open("parameter.json", "r") as f:
-    parameter = json.load(f)
-
-log_start = parameter["LOG_START"]
-log_end = parameter["LOG_END"]
-L = parameter["L"]
-N = parameter["N"]
-dtau = parameter["DELTA"]
-
-tau_start = log_to_tau(log_start)
-tau_end = log_to_tau(log_end)
-dx = L / N
-
 # lets say we want to simulat until this log
-def minimal_parameters(final_log=log_end):
+def minimal_parameters(final_log):
     # where
     # log = log(m_r / H)
 

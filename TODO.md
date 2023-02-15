@@ -17,7 +17,7 @@
 [ ] higher order time propagation algorithm
 [ ] higher order stecil for laplacian
 [ ] GPU code?
-[ ] output in a newly created directory and python analysis scripts take the directory as an argument
+[x] output in a newly created directory and python analysis scripts take the directory as an argument
 [ ] parse cmdline args
 [x] reverse loop order for cache efficentcy
 [x] const correctness
@@ -26,3 +26,4 @@
 [x] write energy
 [ ] write propagation algorithm
 [ ] video of strings
+[ ] I think the detected strings in c and python are not the same

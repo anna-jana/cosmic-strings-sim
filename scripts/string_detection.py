@@ -1,10 +1,7 @@
 ############## prototype implementation for string detection ############
 import numpy as np, matplotlib.pyplot as plt
-from scipy.ndimage import label
 from collections import defaultdict
-import sys
-import cosmology
-from cosmology import N, L, dx
+from load_data import N, L, dx, dtau, final_field, tau_start
 
 # (string contention method from Moore at al.)
 def crosses_real_axis(phi1, phi2):
@@ -84,8 +81,8 @@ def plot(strings, size, scale, step=None):
     ax.set_xlim(0, size*scale)
     ax.set_ylim(0, size*scale)
     ax.set_zlim(0, size*scale)
-    if step:
-        ax.set_title(f"$\\tau = {step*cosmology.dtau}$")
+    if step is not None:
+        ax.set_title(f"$\\tau = {tau_start + step*dtau}$")
     for string in strings:
         x, y, z = np.array(string).T * scale
         last = 0
@@ -96,21 +93,13 @@ def plot(strings, size, scale, step=None):
                 l, = plt.plot(x[last:i], y[last:i], z[last:i], color=color)
                 color = l.get_color()
                 last = i
-    plt.show()
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
-        fname = sys.argv[1]
-    elif len(sys.argv) == 1:
-        fname = "final_field.dat"
-    else:
-        raise ValueError("more then one argument")
-    field = np.loadtxt(fname, dtype="complex")
-    field = field.reshape(N, N, N)
-    is_close = is_string_at(field)
+    is_close = is_string_at(final_field)
     ix, iy, iz = np.where(is_close)
     patch = set(zip(ix, iy, iz))
     # we can also do this with the actual coordinates (everything times dx)
     # but this requiures passing min_string_len = 3 bc of rounding issues (I think)
-    strings = nearest_neighbor_strings(patch, 3*(2)**2, cosmology.N)
-    plot(strings, N, cosmology.dx)
+    strings = nearest_neighbor_strings(patch, 3*(2)**2, N)
+    plot(strings, N, dx)
+    plt.show()

@@ -4,7 +4,7 @@ from scipy.fft import fftn, fftfreq
 from numba import jit
 import os.path
 import cosmology
-from cosmology import N, dx, L
+from load_data import N, dx, L, tau_end
 import string_detection
 
 plt.ion()
@@ -35,7 +35,7 @@ def compute_W(phi):
 
 phi = np.reshape(np.loadtxt("final_field.dat", dtype="complex"), (N, N, N))
 phi_dot = np.reshape(np.loadtxt("final_field_dot.dat",  dtype="complex"), (N, N, N))
-a = cosmology.tau_to_a(cosmology.tau_end)
+a = cosmology.tau_to_a(tau_end)
 
 # dealing with momenta (independent of string screening method)
 dx_physical = dx * a
