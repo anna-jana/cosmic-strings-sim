@@ -81,7 +81,7 @@ static inline int handedness(complex double phi1, complex double phi2) {
 
 static inline bool loop_contains_string(complex double phi1, complex double phi2,
                                    complex double phi3, complex double phi4) {
-    int loop = (
+    const int loop = (
         + crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
         + crosses_real_axis(phi2, phi3) * handedness(phi2, phi3)
         + crosses_real_axis(phi3, phi4) * handedness(phi3, phi4)
@@ -108,10 +108,10 @@ static inline bool is_string_at_zx(int ix, int iy, int iz) {
 // find grid points close to strings
 static void find_string_points(void) {
     clear_points();
-    for(int ix = 0; ix < N; ix++) {
+    for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
-            for(int iz = 0; iz < N; iz++) {
-                bool contains_string = is_string_at_xy(ix, iy, iz) ||
+            for(int ix = 0; ix < N; ix++) {
+                const bool contains_string = is_string_at_xy(ix, iy, iz) ||
                                        is_string_at_yz(ix, iy, iz) ||
                                        is_string_at_zx(ix, iy, iz);
                 if(contains_string) {

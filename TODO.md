@@ -8,13 +8,21 @@
 [ ] distributed memory paralism
 [x] compute energy components
 [ ] make some constants parameters (defines -> global variables) =====> makes the code slower
-[ ] compute spectrum
-[ ] compute instantaeous spectrum
+[ ] compute spectrum (python)
+[ ] compute instantaeous spectrum (python)
+[ ] compute spectrum and instantaeous spectrum (c)
 [ ] compute gamme factor for strings
 [x] exchange parameters between python and c (either call c code from python or parameter file)
 [ ] study creation of initial conditions
 [ ] higher order time propagation algorithm
 [ ] higher order stecil for laplacian
-[ ] low level optimization
 [ ] GPU code?
 [ ] output in a newly created directory and python analysis scripts take the directory as an argument
+[ ] parse cmdline args
+[x] reverse loop order for cache efficentcy
+[x] const correctness
+[ ] use arrays for allocation
+[x] write eom
+[x] write energy
+[ ] write propagation algorithm
+[ ] video of strings

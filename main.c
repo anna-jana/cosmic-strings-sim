@@ -15,8 +15,8 @@ int main(void) {
     write_field("initial_field.dat", phi);
 
     for(step = 0; step < NSTEPS; step++) {
-        double l = TAU_TO_LOG(current_conformal_time);
-        double H = 1/exp(l);
+        const double l = TAU_TO_LOG(current_conformal_time);
+        const double H = 1/exp(l);
         printf("\rINFO: running simulation: step = %i/%i, conformal time = %lf, log = %lf, H = %lf",
                 step + 1, NSTEPS, current_conformal_time, l, H);
         fflush(stdout);

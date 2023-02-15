@@ -89,13 +89,13 @@ void make_step(void) {
 
 // generate random complex field with strings
 void random_field(fftw_complex* field) {
-    for(int ix = 0; ix < N; ix++) {
+    for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
-            for(int iz = 0; iz < N; iz++) {
-                double kx = ks[ix];
-                double ky = ks[iy];
-                double kz = ks[iz];
-                double k = sqrt(kx*kx + ky*ky + kz*kz);
+            for(int ix = 0; ix < N; ix++) {
+                const double kx = ks[ix];
+                const double ky = ks[iy];
+                const double kz = ks[iz];
+                const double k = sqrt(kx*kx + ky*ky + kz*kz);
                 if(k <= KMAX) {
                     hat[AT(ix, iy, iz)] =
                         random_uniform(- FIELD_MAX, FIELD_MAX);
@@ -115,13 +115,13 @@ void random_field(fftw_complex* field) {
 // calculate the right hand side of the PDE
 void compute_next_force(void) {
     double scale_factor = TAU_TO_A(current_conformal_time);
-    for(int ix = 0; ix < N; ix++) {
+    for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
-            for(int iz = 0; iz < N; iz++) {
-                complex double phi_val = phi[AT(ix, iy, iz)];
-                double phi_abs = creal(phi_val) * creal(phi_val) + cimag(phi_val) * cimag(phi_val);
-                complex double pot_force = phi_val * (phi_abs - 0.5*scale_factor);
-                complex double laplace = - 6 * phi_val +
+            for(int ix = 0; ix < N; ix++) {
+                const complex double phi_val = phi[AT(ix, iy, iz)];
+                const double phi_abs = creal(phi_val) * creal(phi_val) + cimag(phi_val) * cimag(phi_val);
+                const complex double pot_force = phi_val * (phi_abs - 0.5*scale_factor);
+                const complex double laplace = - 6 * phi_val +
                     phi[CYCLIC_AT(ix + 1, iy, iz)] +
                     phi[CYCLIC_AT(ix - 1, iy, iz)] +
                     phi[CYCLIC_AT(ix, iy + 1, iz)] +

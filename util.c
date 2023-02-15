@@ -50,8 +50,8 @@ void write_field(char* fname, complex double* field) {
     printf("\nINFO: writing grid to %s\n", fname);
     FILE* out = fopen(fname, "w");
     for(int iz = 0; iz < N; iz++) {
-        for(int ix = 0; ix < N; ix++) {
-            for(int iy = 0; iy < N; iy++) {
+        for(int iy = 0; iy < N; iy++) {
+            for(int ix = 0; ix < N; ix++) {
                 fprintf(out, "%lf+%lfj ", creal(field[AT(ix, iy, iz)]), cimag(field[AT(ix, iy, iz)]));
             }
             fprintf(out, "\n");
