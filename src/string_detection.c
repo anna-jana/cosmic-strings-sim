@@ -24,12 +24,13 @@ int points_length;
 struct Index* points;
 
 FILE* out_strings;
-char* string_fname = "strings.dat";
+#define STRING_FNAME "strings.dat"
 
 // external interface
 void init_detect_strings(void) {
-    printf("INFO: writing strings to %s\n", string_fname);
-    out_strings = fopen(string_fname, "w");
+    char* string_filepath = create_output_filepath(STRING_FNAME);
+    printf("INFO: writing strings to %s\n", string_filepath);
+    out_strings = fopen(string_filepath, "w");
 
     points_capacity = 2*N;
     points_length = 0;

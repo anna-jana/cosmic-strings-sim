@@ -11,7 +11,8 @@ double* theta;
 double* radial;
 
 void init_energy_computation(void) {
-    out_energies = fopen(ENERGY_FNAME, "w");
+    char* energy_filepath = create_output_filepath(ENERGY_FNAME);
+    out_energies = fopen(energy_filepath, "w");
     theta = malloc(sizeof(double) * N3);
     radial = malloc(sizeof(double) * N3);
 }

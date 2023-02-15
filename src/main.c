@@ -5,6 +5,7 @@
 #include "globals.h"
 
 int main(void) {
+    create_output_dir();
     output_parameters();
 
     init();

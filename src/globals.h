@@ -39,10 +39,12 @@ int sign(double x);
 #define TAU_TO_A(TAU) (-0.5*TAU)
 #define TAU_TO_LOG(TAU) H_TO_LOG(T_TO_H(TAU_TO_T(TAU)))
 
-void write_field(char* fname, complex double* field);
+void write_field(char* fname, const complex double* field);
 #define PARAMETER_FILENAME "parameter.json"
 void output_parameters(void);
 
+void create_output_dir(void);
+char* create_output_filepath(const char* filename);
 
 /****************************** propagator.c *************************/
 /*** spacial discretisation ***/
