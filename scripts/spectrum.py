@@ -1,13 +1,15 @@
+import os.path, sys
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fftn, fftfreq
 from numba import jit
-import os.path
-import cosmology
-from load_data import N, dx, L, tau_end
-import string_detection
+import cosmology, string_detection, load_data
 
 plt.ion()
+
+data = load_data.OutputDir("../run1_output")
+N, phi, phi_dot, dx, L = data.N, data.final_field, data.final_field_dot, data.dx, L
+a = cosmology.tau_to_a(data.tau_end)
 
 def compute_theta_dot(phi, phi_dot, a):
     d_theta_d_tau = (
@@ -33,9 +35,6 @@ def compute_W(phi):
             W[(p[0] + d1) % N, (p[1] + d2) % N, (p[2] + d3) % N] = 0
     return W
 
-phi = np.reshape(np.loadtxt("final_field.dat", dtype="complex"), (N, N, N))
-phi_dot = np.reshape(np.loadtxt("final_field_dot.dat",  dtype="complex"), (N, N, N))
-a = cosmology.tau_to_a(tau_end)
 
 # dealing with momenta (independent of string screening method)
 dx_physical = dx * a
@@ -157,5 +156,4 @@ plt.ylabel("P(k)")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()
-plt.show()
 

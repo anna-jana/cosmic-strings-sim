@@ -2,39 +2,34 @@ import json, sys, itertools, os
 import numpy as np
 import cosmology
 
-if len(sys.argv) == 1:
-    for i in itertools.count(1):
-        dirname = f"run{i}_output"
-        if os.path.exists(dirname):
-            break
-elif len(sys.argv) == 2:
-    dirname = sys.argv[1]
-else:
-    raise ValueError("invalid argument")
+class OutputDir:
+    def __init__(self, dirname):
+        self.dirname = dirname
 
-def create_output_path(fname):
-    return os.path.join(dirname, fname)
+        with open(self.create_output_path("parameter.json"), "r") as f:
+            parameter = json.load(f)
 
-with open(create_output_path("parameter.json"), "r") as f:
-    parameter = json.load(f)
+        self.log_start = parameter["LOG_START"]
+        self.log_end = parameter["LOG_END"]
+        self.L = parameter["L"]
+        self.N = parameter["N"]
+        self.dtau = parameter["DELTA"]
 
-log_start = parameter["LOG_START"]
-log_end = parameter["LOG_END"]
-L = parameter["L"]
-N = parameter["N"]
-dtau = parameter["DELTA"]
+        self.tau_start = cosmology.log_to_tau(self.log_start)
+        self.tau_end = cosmology.log_to_tau(self.log_end)
+        self.dx = self.L / self.N
 
-tau_start = cosmology.log_to_tau(log_start)
-tau_end = cosmology.log_to_tau(log_end)
-dx = L / N
+        self.final_field = np.loadtxt(self.create_output_path("final_field.dat"), dtype="complex").reshape(self.N, self.N, self.N)
+        self.final_field_dot = np.loadtxt(self.create_output_path("final_field_dot.dat"),  dtype="complex").reshape(self.N, self.N, self.N)
 
-fname = create_output_path("final_field.dat")
-final_field = np.loadtxt(fname, dtype="complex")
-final_field = final_field.reshape(N, N, N)
+        self.string_step, self.string_id, self.string_x, self.string_y, self.string_z = \
+                np.loadtxt(self.create_output_path("strings.dat")).T
 
-string_step, string_id, string_x, string_y, string_z = np.loadtxt(create_output_path("strings.dat")).T
+        self.energy_step, self.axion_kinetic, self.axion_gradient, self.axion_total, self.radial_kinetic, \
+            self.radial_gradient, self.radial_potential, self.radial_total, self.interaction, self.total = \
+            np.loadtxt(self.create_output_path("energies.dat")).T
 
-energy_step, axion_kinetic, axion_gradient, axion_total, radial_kinetic, \
-    radial_gradient, radial_potential, radial_total, interaction, total = \
-    np.loadtxt(create_output_path("energies.dat")).T
+    def create_output_path(self, fname):
+        return os.path.join(self.dirname, fname)
+
 

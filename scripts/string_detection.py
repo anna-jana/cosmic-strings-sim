@@ -1,7 +1,8 @@
 ############## prototype implementation for string detection ############
-import numpy as np, matplotlib.pyplot as plt
+import sys
 from collections import defaultdict
-from load_data import N, L, dx, dtau, final_field, tau_start
+import numpy as np, matplotlib.pyplot as plt
+import load_data
 
 # (string contention method from Moore at al.)
 def crosses_real_axis(phi1, phi2):
@@ -72,7 +73,7 @@ def nearest_neighbor_strings(patch, maximal_distance, side_length, min_string_le
         strings.append(current_string)
     return strings
 
-def plot(strings, size, scale, step=None):
+def plot(strings, size, scale, data=None, step=None):
     max_dist = 3*(scale * size / 4)**2
     fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
     ax.set_xlabel("x")
@@ -82,7 +83,7 @@ def plot(strings, size, scale, step=None):
     ax.set_ylim(0, size*scale)
     ax.set_zlim(0, size*scale)
     if step is not None:
-        ax.set_title(f"$\\tau = {tau_start + step*dtau}$")
+        ax.set_title(f"$\\tau = {data.tau_start + step*data.dtau}$")
     for string in strings:
         x, y, z = np.array(string).T * scale
         last = 0
@@ -95,11 +96,12 @@ def plot(strings, size, scale, step=None):
                 last = i
 
 if __name__ == "__main__":
-    is_close = is_string_at(final_field)
+    data = load_data.OutputDir(sys.argv[1])
+    is_close = is_string_at(data.final_field)
     ix, iy, iz = np.where(is_close)
     patch = set(zip(ix, iy, iz))
     # we can also do this with the actual coordinates (everything times dx)
     # but this requiures passing min_string_len = 3 bc of rounding issues (I think)
-    strings = nearest_neighbor_strings(patch, 3*(2)**2, N)
-    plot(strings, N, dx)
+    strings = nearest_neighbor_strings(patch, 3*(2)**2, data.N)
+    plot(strings, data.N, data.dx)
     plt.show()
