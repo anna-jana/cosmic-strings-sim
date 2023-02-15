@@ -46,7 +46,7 @@ int sign(double x) {
     return 0;
 }
 
-void write_field(char* fname, complex double* field) {
+void write_field(char* fname, const complex double* field) {
     printf("\nINFO: writing grid to %s\n", fname);
     FILE* out = fopen(fname, "w");
     for(int iz = 0; iz < N; iz++) {

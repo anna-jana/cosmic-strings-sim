@@ -1,5 +1,5 @@
 import numpy as np, matplotlib.pyplot as plt
-import prototype_string_detection, cosmology
+import cosmology
 
 strings = np.loadtxt("strings.dat")
 step, string_id, x, y, z = strings.T

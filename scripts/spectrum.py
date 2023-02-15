@@ -5,7 +5,7 @@ from numba import jit
 import os.path
 import cosmology
 from cosmology import N, dx, L
-import prototype_string_detection
+import string_detection
 
 plt.ion()
 
@@ -19,7 +19,7 @@ def compute_theta_dot(phi, phi_dot, a):
 
 def compute_W(phi):
     N = phi.shape[0]
-    strings = prototype_string_detection.is_string_at(phi)
+    strings = string_detection.is_string_at(phi)
     ps = np.array(list(zip(*np.where(strings))))
     d_min = int(np.ceil(np.sqrt(3) * 1))
     W = np.ones((N, N, N))

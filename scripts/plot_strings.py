@@ -1,6 +1,6 @@
 import numpy as np, matplotlib.pyplot as plt
 import sys
-import prototype_string_detection, cosmology
+import string_detection, cosmology
 
 assert len(sys.argv) == 2
 step_used = int(sys.argv[1])
@@ -12,4 +12,4 @@ for i in np.unique(string_id[step == step_used]):
     mask = (step == step_used) & (string_id == i)
     string_list.append(list(zip(x[mask], y[mask], z[mask])))
 
-prototype_string_detection.plot(string_list, cosmology.N, cosmology.dx, step=step_used)
+string_detection.plot(string_list, cosmology.N, cosmology.dx, step=step_used)
