@@ -1,3 +1,5 @@
+# TODO list for cosmic string simulation
+
 [x] generate initial conditions using inverse FFT
 [x] propgatation algorithm
 [x] plot slices
@@ -9,6 +11,7 @@
 [x] compute energy components
 [ ] make some constants parameters (defines -> global variables) =====> makes the code slower
 [ ] compute spectrum (python)
+[ ] prefactors between kawasaki and gorghetto differ
 [ ] compute instantaeous spectrum (python)
 [ ] compute spectrum and instantaeous spectrum (c)
 [ ] compute gamme factor for strings
@@ -22,8 +25,9 @@
 [x] reverse loop order for cache efficentcy
 [x] const correctness
 [ ] use arrays for allocation
-[x] write eom
-[x] write energy
-[ ] write propagation algorithm
+[x] document eom
+[x] document energy
+[ ] document propagation algorithm
 [ ] video of strings
-[ ] I think the detected strings in c and python are not the same
+[~] I think the detected strings in c and python are not the same
+[x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)

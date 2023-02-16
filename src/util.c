@@ -1,11 +1,6 @@
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <errno.h>
-#include <assert.h>
-#include <stdbool.h>
-
 #include "globals.h"
+
+#include <stdlib.h>
 
 /*************************************** math functions ********************************/
 // generate an array with the frequencies (in our case wavenumber) returned by the discrete fourier transform
@@ -51,60 +46,3 @@ int sign(double x) {
     return 0;
 }
 
-void write_field(char* fname, const complex double* field) {
-    char* fpath = create_output_filepath(fname);
-    printf("\nINFO: writing grid to %s\n", fpath);
-    FILE* out = fopen(fpath, "w");
-    for(int iz = 0; iz < N; iz++) {
-        for(int iy = 0; iy < N; iy++) {
-            for(int ix = 0; ix < N; ix++) {
-                fprintf(out, "%lf+%lfj ",
-                        creal(field[AT(ix, iy, iz)]),
-                        cimag(field[AT(ix, iy, iz)]));
-            }
-            fprintf(out, "\n");
-        }
-    }
-    fclose(out);
-}
-
-void output_parameters(void) {
-    char* param_fpath = create_output_filepath(PARAMETER_FILENAME);
-    printf("INFO: writing parameters to %s\n", param_fpath);
-    FILE* out = fopen(param_fpath, "w");
-    fprintf(out, "{\n");
-    fprintf(out, "\"L\": %lf,\n", L);
-    fprintf(out, "\"LOG_START\": %lf,\n", LOG_START);
-    fprintf(out, "\"LOG_END\": %lf,\n", LOG_END);
-    fprintf(out, "\"N\": %i,\n", N);
-    fprintf(out, "\"DELTA\": %lf\n", DELTA);
-    fprintf(out, "}\n");
-    fclose(out);
-}
-
-#define MAX_PATH_SIZE 1024
-
-static char output_dir[MAX_PATH_SIZE];
-static char filepath_buffer[MAX_PATH_SIZE + MAX_PATH_SIZE + 1];
-
-void create_output_dir(void) {
-    int i = 1;
-    while(true) {
-        sprintf(output_dir, "run%i_output", i);
-        DIR* dir = opendir(output_dir);
-        if (dir) {
-            closedir(dir);
-            i++;
-            continue;
-        }
-        assert(ENOENT == errno);
-        mkdir(output_dir, S_IRWXU);
-        printf("INFO: output directory is %s\n", output_dir);
-        return;
-    }
-}
-
-char* create_output_filepath(const char* filename) {
-    sprintf(filepath_buffer, "%s/%s", output_dir, filename);
-    return filepath_buffer;
-}

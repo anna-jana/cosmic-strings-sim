@@ -5,7 +5,8 @@
 
 #include "globals.h"
 
-int main(void) {
+int main(int argc, char* argv[]) {
+    parse_cmdline_args(argc, argv);
     create_output_dir();
     output_parameters();
 
