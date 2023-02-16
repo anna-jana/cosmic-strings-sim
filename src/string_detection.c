@@ -163,6 +163,8 @@ static void group_strings(void) {
     while(points_length > 0) {
         struct Index initial_point = pop_point();
         struct Index last_point = initial_point;
+        fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
+                last_point.ix, last_point.iy, last_point.iz);
         int current_string_length = 1;
         while(true) {
             if(points_length == 0) {
