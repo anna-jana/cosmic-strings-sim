@@ -3,19 +3,11 @@
 
 #include <math.h>
 #include <complex.h>
+#include <stdbool.h>
 
 #include <fftw3.h>
 
 #define DEBUG
-#define EVERY_ANALYSIS_STEP 10
-
-// parameters
-// simulation domain in time in log units
-#define LOG_START 2.0
-#define LOG_END 3.0
-#define L (1/LOG_TO_H(LOG_END)) // comoving length of the simulation box in units of 1/m_r
-#define N ((int)ceil(L * TAU_TO_A(LOG_TO_TAU(LOG_END)))) // number of grid points in one dimension
-#define DELTA -1e-2 // step size for time stepping
 
 /******************************** utils.c **************************/
 #define PI 3.14159265358979323846
@@ -41,58 +33,47 @@ int sign(double x);
 
 /********************************* io.c ********************************/
 void write_field(char* fname, const complex double* field);
-
-#define PARAMETER_FILENAME "parameter.json"
 void output_parameters(void);
-
 void create_output_dir(void);
 char* create_output_filepath(const char* filename);
+bool parse_arg(int argc, char* argv[], char* arg, char type, bool required, void* value);
 
-void parse_cmdline_args(int argc, char* argv[]);
+/********************************** state.c ******************************/
+// parameters
+extern double LOG_START, LOG_END;
+extern double L;
+extern int N;
+extern double Delta_tau;
+extern double KMAX;
+extern int SEED;
+extern int EVERY_ANALYSIS_STEP;
 
-/****************************** propagator.c *************************/
+extern int N3;
+extern double dx, dx2;
+extern double TAU_START;
+extern double TAU_END;
+extern double TAU_SPAN;
+extern int NSTEPS;
+
 /*** spacial discretisation ***/
-// for N see parameters, number of grid points in one dimension
-// total number
-#define N3 (N*N*N)
-#define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))
-#define CYCLIC_AT(ix, iy, iz) AT(mod(ix, N), mod(iy, N), mod(iz, N))
-// for L see parameters, comoving length of the simulation box in units of 1/m_r
-// L/N not L/(N-1) bc we have cyclic boundary conditions
-// *...*...* N = 2, dx = L / N
-#define dx (L/N)
-#define dx2 (dx*dx)
+extern double current_conformal_time; // simulation domain in time in conformal time
+extern int step;
 extern fftw_complex *phi, *phi_dot, *phi_dot_dot;
 extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 
-/*** simulation time ***/
-// simulation domain in time in conformal time
-// for LOG_START and LOG_END see parameters
-#define TAU_START LOG_TO_TAU(LOG_START)
-#define TAU_END LOG_TO_TAU(LOG_END)
-#define TAU_SPAN ((TAU_END) - (TAU_START))
-// discretisation (DELTA is negative because the conformal time is decreasing
-// for DELTA see parameters
-#define NSTEPS ((int)(ceil(TAU_SPAN / DELTA)))
-extern double current_conformal_time;
-extern int step;
+// for N see parameters, number of grid points in one dimension
+#define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))
+#define CYCLIC_AT(ix, iy, iz) AT(mod(ix, N), mod(iy, N), mod(iz, N))
 
-/*** initial state generation ***/
-#define FIELD_MAX (1 / sqrt(2))
-#define KMAX 1.0
-#define SEED 42
-extern fftw_complex *hat;
-extern double* ks;
-void random_field(fftw_complex* field);
+void init_parameters(int argc, char* argv[]);
+void init_state(void);
+void deinit_state(void);
 
-/*** propagation ***/
-void init(void);
-void deinit(void);
+/****************************** propagator.c *************************/
 void make_step(void);
 void compute_next_force(void);
 
 /********************************* string_detection.c ****************************/
-/*** detect and store strings ***/
 void init_detect_strings(void);
 void deinit_detect_strings(void);
 void detect_strings(void);

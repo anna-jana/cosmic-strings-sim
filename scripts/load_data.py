@@ -13,7 +13,7 @@ class OutputDir:
         self.log_end = parameter["LOG_END"]
         self.L = parameter["L"]
         self.N = parameter["N"]
-        self.dtau = parameter["DELTA"]
+        self.dtau = parameter["DELTA"] if "DELTA" in parameter else parameter["Delta_tau"]
 
         self.tau_start = cosmology.log_to_tau(self.log_start)
         self.tau_end = cosmology.log_to_tau(self.log_end)

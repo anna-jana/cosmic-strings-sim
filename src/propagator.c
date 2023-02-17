@@ -8,68 +8,18 @@
 #include <fftw3.h>
 
 #include "globals.h"
-// simulation state (global for now, maybe put into struct later)
-double current_conformal_time;
-int step;
-fftw_complex *phi, *phi_dot, *phi_dot_dot;
-fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
-
-// initial state generation
-fftw_complex *hat;
-double* ks;
-
-void init(void) {
-    srand(SEED);
-
-    current_conformal_time = TAU_START;
-    step = 0;
-
-    phi = fftw_malloc(sizeof(fftw_complex) * N3);
-    phi_dot = fftw_malloc(sizeof(fftw_complex) * N3);
-    phi_dot_dot = fftw_malloc(sizeof(fftw_complex) * N3);
-    next_phi = fftw_malloc(sizeof(fftw_complex) * N3);
-    next_phi_dot = fftw_malloc(sizeof(fftw_complex) * N3);
-    next_phi_dot_dot = fftw_malloc(sizeof(fftw_complex) * N3);
-    hat = fftw_malloc(sizeof(fftw_complex) * N3);
-
-    double kmax_grid = calc_k_max_grid(N, dx);
-    printf("kmax_grid: %lf, KMAX: %lf\n", kmax_grid, KMAX);
-    fflush(stdout);
-    assert(KMAX >= 0.0 && KMAX <= kmax_grid);
-    ks = fft_freq(N, dx);
-    random_field(phi);
-    random_field(phi_dot);
-
-    compute_next_force();
-    // if have to swap phi_dot_dot and next_phi_dot_dot,
-    // bc compute_next_force() is wrting to the next_phi_dot_dot array
-    fftw_complex* tmp = phi_dot_dot;
-    phi_dot_dot = next_phi_dot_dot;
-    next_phi_dot_dot = tmp;
-}
-
-void deinit(void) {
-    fftw_free(phi);
-    fftw_free(phi_dot);
-    fftw_free(phi_dot_dot);
-    fftw_free(next_phi);
-    fftw_free(next_phi_dot);
-    fftw_free(next_phi_dot_dot);
-    fftw_free(hat);
-    free(ks);
-}
 
 void make_step(void) {
-    current_conformal_time = TAU_START + step * DELTA;
+    current_conformal_time = TAU_START + step * Delta_tau;
 
     // propagate PDE using velocity verlet algorithm
     // update the field ("position")
     for(int i = 0; i < N3; i++)
-        next_phi[i] = phi[i] + DELTA*phi_dot[i] + 0.5*DELTA*DELTA*phi_dot_dot[i];
+        next_phi[i] = phi[i] + Delta_tau*phi_dot[i] + 0.5*Delta_tau*Delta_tau*phi_dot_dot[i];
     // update the field derivative ("velocity")
     compute_next_force();
     for(int i = 0; i < N3; i++)
-        next_phi_dot[i] = phi_dot[i] + DELTA*(phi_dot_dot[i] + next_phi_dot_dot[i])/2;
+        next_phi_dot[i] = phi_dot[i] + Delta_tau*(phi_dot_dot[i] + next_phi_dot_dot[i])/2;
 
     // swap current and next arrays
     fftw_complex* tmp;
@@ -85,31 +35,6 @@ void make_step(void) {
     tmp = phi_dot_dot;
     phi_dot_dot = next_phi_dot_dot;
     next_phi_dot_dot = tmp;
-}
-
-// generate random complex field with strings
-void random_field(fftw_complex* field) {
-    for(int iz = 0; iz < N; iz++) {
-        for(int iy = 0; iy < N; iy++) {
-            for(int ix = 0; ix < N; ix++) {
-                const double kx = ks[ix];
-                const double ky = ks[iy];
-                const double kz = ks[iz];
-                const double k = sqrt(kx*kx + ky*ky + kz*kz);
-                if(k <= KMAX) {
-                    hat[AT(ix, iy, iz)] =
-                        random_uniform(- FIELD_MAX, FIELD_MAX);
-                } else {
-                    hat[AT(ix, iy, iz)] = 0.0;
-                }
-            }
-        }
-    }
-    fftw_plan gen_plan = fftw_plan_dft_3d(N, N, N, hat, field, FFTW_BACKWARD, FFTW_ESTIMATE);
-    fftw_execute(gen_plan);
-    fftw_destroy_plan(gen_plan);
-    for(int i = 0; i < N3; i++)
-        field[i] /= N;
 }
 
 // calculate the right hand side of the PDE

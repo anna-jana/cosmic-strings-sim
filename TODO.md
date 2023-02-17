@@ -9,7 +9,7 @@
 [ ] shared memory paralism
 [ ] distributed memory paralism
 [x] compute energy components
-[ ] make some constants parameters (defines -> global variables) =====> makes the code slower
+[x] make some constants parameters (defines -> global variables) =====> makes the code slower
 [ ] compute spectrum (python)
 [ ] prefactors between kawasaki and gorghetto differ
 [ ] compute instantaeous spectrum (python)
@@ -21,7 +21,7 @@
 [ ] higher order stecil for laplacian
 [ ] GPU code?
 [x] output in a newly created directory and python analysis scripts take the directory as an argument
-[ ] parse cmdline args
+[x] parse cmdline args
 [x] reverse loop order for cache efficentcy
 [x] const correctness
 [ ] use arrays for allocation

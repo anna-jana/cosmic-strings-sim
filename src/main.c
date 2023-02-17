@@ -6,11 +6,11 @@
 #include "globals.h"
 
 int main(int argc, char* argv[]) {
-    parse_cmdline_args(argc, argv);
+    init_parameters(argc, argv);
     create_output_dir();
     output_parameters();
 
-    init();
+    init_state();
     init_detect_strings();
     init_energy_computation();
     init_compute_spectrum();
@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     write_field("final_field_dot.dat", phi_dot);
     printf("\n");
 
-    deinit();
+    deinit_state();
     deinit_detect_strings();
     deinit_energy_computation();
     deinit_compute_spectrum();
