@@ -6,7 +6,7 @@
 [x] string detection
 [x] string plotting
 [~] string length and loop size distribution
-[ ] shared memory paralism
+[x] shared memory paralism
 [ ] distributed memory paralism
 [x] compute energy components
 [x] make some constants parameters (defines -> global variables) =====> makes the code slower

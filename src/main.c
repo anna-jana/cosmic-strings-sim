@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <omp.h>
 
 #include "globals.h"
 
@@ -16,6 +17,9 @@ int main(int argc, char* argv[]) {
     init_compute_spectrum();
 
     write_field("initial_field.dat", phi);
+
+    int num_threads = omp_get_num_threads();
+    printf("INFO: using %i threads\n", num_threads);
 
     for(step = 0; step < NSTEPS; step++) {
         const double l = TAU_TO_LOG(current_conformal_time);

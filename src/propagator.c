@@ -14,10 +14,12 @@ void make_step(void) {
 
     // propagate PDE using velocity verlet algorithm
     // update the field ("position")
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++)
         next_phi[i] = phi[i] + Delta_tau*phi_dot[i] + 0.5*Delta_tau*Delta_tau*phi_dot_dot[i];
     // update the field derivative ("velocity")
     compute_next_force();
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++)
         next_phi_dot[i] = phi_dot[i] + Delta_tau*(phi_dot_dot[i] + next_phi_dot_dot[i])/2;
 
@@ -40,6 +42,7 @@ void make_step(void) {
 // calculate the right hand side of the PDE
 void compute_next_force(void) {
     double scale_factor = TAU_TO_A(current_conformal_time);
+    #pragma omp parallel for collapse(3)
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
             for(int ix = 0; ix < N; ix++) {

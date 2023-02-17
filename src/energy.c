@@ -40,6 +40,7 @@ void compute_energy(void) {
     double mean_radial_potential = 0.0;
     double mean_interaction = 0.0;
 
+    #pragma omp parallel for collapse(3)
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
             for(int ix = 0; ix < N; ix++) {

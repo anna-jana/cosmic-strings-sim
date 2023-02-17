@@ -123,6 +123,7 @@ static void random_field(fftw_complex* field) {
     fftw_plan gen_plan = fftw_plan_dft_3d(N, N, N, hat, field, FFTW_BACKWARD, FFTW_ESTIMATE);
     fftw_execute(gen_plan);
     fftw_destroy_plan(gen_plan);
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++)
         field[i] /= N;
 }
