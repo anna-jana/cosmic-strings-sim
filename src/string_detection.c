@@ -15,15 +15,54 @@
 #include <complex.h>
 #include <assert.h>
 #include <time.h>
+#include <omp.h>
 
 struct Index {
     int ix, iy, iz;
 };
 
-int points_capacity;
-int points_length;
-struct Index* points;
+// thread save array list for string points
+static int* points_capacities;
+static int* points_lengths;
+static struct Index** points;
 
+static inline void clear_points(void) {
+    for(int i = 0; i < num_threads; i++)
+        points_lengths[i] = 0;
+}
+
+static inline void add_point(struct Index p) {
+    int thread_id = omp_get_thread_num();
+    if(points_lengths[thread_id] >= points_capacities[thread_id]) {
+        points_capacities[thread_id] *= 2;
+        points[thread_id] = realloc(points[thread_id],
+                sizeof(struct Index) * points_capacities[thread_id]);
+    }
+    points[thread_id][points_lengths[thread_id]++] = p;
+}
+
+static inline void remove_point(int thread_id, int i) {
+    points[thread_id][i] = points[thread_id][--points_lengths[thread_id]];
+}
+
+static inline struct Index pop_point(void) {
+    for(int i = num_threads - 1; i >= 0; i--) {
+        if(points_lengths[i] > 0) {
+            return points[i][--points_lengths[i]];
+        }
+    }
+    assert(false);
+}
+
+static inline bool are_points_empty(void) {
+    for(int i = 0; i < num_threads; i++) {
+        if(points_lengths[i] > 0)
+            return true;
+    }
+    return false;
+}
+
+// file output
 FILE* out_strings;
 #define STRING_FNAME "strings.dat"
 
@@ -33,13 +72,25 @@ void init_detect_strings(void) {
     printf("INFO: writing strings to %s\n", string_filepath);
     out_strings = fopen(string_filepath, "w");
 
-    points_capacity = 2*N;
-    points_length = 0;
-    points = malloc(sizeof(struct Index) * points_capacity);
+    points_capacities = malloc(num_threads * sizeof(int*));
+    for(int i = 0; i < num_threads; i++)
+        points_capacities[i] = 2*N;
+
+    points_lengths = malloc(sizeof(int*) * num_threads);
+    clear_points();
+
+    points = malloc(sizeof(struct Index*) * num_threads);
+    for(int i = 0; i < num_threads; i++)
+        points[i] = malloc(sizeof(struct Index) * points_capacities[i]);
 }
 
 void deinit_detect_strings(void) {
     fclose(out_strings);
+
+    free(points_capacities);
+    free(points_lengths);
+    for(int i = 0; i < num_threads; i++)
+        free(points[i]);
     free(points);
 }
 
@@ -49,27 +100,6 @@ static void find_string_points(void);
 void detect_strings(void) {
     find_string_points();
     group_strings();
-}
-
-// list of points
-static inline void clear_points(void) {
-    points_length = 0;
-}
-
-static inline void add_point(struct Index p) {
-    if(points_length >= points_capacity) {
-        points_capacity *= 2;
-        points = realloc(points, sizeof(struct Index) * points_capacity);
-    }
-    points[points_length++] = p;
-}
-
-static inline void remove_point(int i) {
-    points[i] = points[--points_length];
-}
-
-static inline struct Index pop_point(void) {
-    return points[--points_length];
 }
 
 // detect string in placet
@@ -110,6 +140,7 @@ static inline bool is_string_at_zx(int ix, int iy, int iz) {
 static void find_string_points(void) {
     clock_t start_clock = clock();
     clear_points();
+    #pragma omp parallel for collapse(3)
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
             for(int ix = 0; ix < N; ix++) {
@@ -126,7 +157,7 @@ static void find_string_points(void) {
     clock_t end_clock = clock();
     double ms_elapsed = 1000.0 * (end_clock - start_clock) / (double) CLOCKS_PER_SEC;
 #ifdef DEBUG
-    printf("\nDEBUG: string points detection took: %lfms\n", ms_elapsed);
+    printf("\nDEBUG: string points detection took: %lf ms\n", ms_elapsed);
     // sequential: ~133ms
 #endif
 }
@@ -164,15 +195,28 @@ inline static int cyclic_dist_squared(struct Index i, struct Index j) {
 
 // grouping points into strings
 static void group_strings(void) {
+    if(step == NSTEPS - 1) {
+        int npoints = 0;
+        for(int thread_id = 0; thread_id < num_threads; thread_id++) {
+            printf("%i \n", points_lengths[thread_id]);
+            npoints += points_lengths[thread_id];
+        }
+        printf("DEBUG: %i points found\n", npoints);
+    }
+    // find one string after the other
     int current_string_index = 0;
-    while(points_length > 0) {
+    while(!are_points_empty()) {
+        // start with one point left in the points list
         struct Index initial_point = pop_point();
         struct Index last_point = initial_point;
         fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
                 last_point.ix, last_point.iy, last_point.iz);
         int current_string_length = 1;
+
         while(true) {
-            if(points_length == 0) {
+            // if the points are empty we check if we can connect to the beginning of
+            // the current string
+            if(are_points_empty()) {
                 if(current_string_length >= 2) {
                     double dist_beginning = cyclic_dist_squared(
                             initial_point, last_point);
@@ -183,27 +227,43 @@ static void group_strings(void) {
                     }
                 }
             }
+
+            // search for the point left in the points list what is closest to the current point
             double min_d = 1.0/0.0;
             int min_i = -1;
-            for(int i = 0; i < points_length; i++) {
-                double d = cyclic_dist_squared(points[i], last_point);
-                if(d < min_d) {
-                    min_d = d;
-                    min_i = i;
+            int min_thread_id = -1;
+            for(int thread_id = 0; thread_id < num_threads; thread_id++) {
+                for(int i = 0; i < points_lengths[i]; i++) {
+                    struct Index p = points[thread_id][i];
+                    double d = cyclic_dist_squared(p, last_point);
+                    if(d < min_d) {
+                        min_d = d;
+                        min_i = i;
+                        min_thread_id = thread_id;
+                    }
                 }
             }
+
+            // check if this point is actually closer then the beginning of
+            // the current string
             if(current_string_length >= MIN_STRING_LENGTH) {
                 double dist_beginning = cyclic_dist_squared(
-                        initial_point, points[min_i]);
-                if(dist_beginning < min_d) break; // loop
+                        initial_point, points[min_thread_id][min_i]);
+                // if beginning is closer -> we have a loop
+                if(dist_beginning < min_d) break;
             }
-            if(min_d > MAXIMAL_DISTANCE) break; // open string
-            // output
-            last_point = points[min_i];
+
+            // check if the clostest point is too far away -> the have an open string here
+            if(min_d > MAXIMAL_DISTANCE) break;
+
+            // ok we dont have have and closed loop or the end of an open string ehre
+            // -> just the next point on the string
+            last_point = points[min_thread_id][min_i]; // the point found is now the newest found point
             fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
                     last_point.ix, last_point.iy, last_point.iz);
             current_string_length++;
-            remove_point(min_i);
+            // remove from poinnts left
+            remove_point(min_thread_id, min_i);
         }
         current_string_index++;
     }
