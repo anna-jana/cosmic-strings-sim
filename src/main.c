@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include <omp.h>
 
 #include "globals.h"
 
@@ -18,8 +17,7 @@ int main(int argc, char* argv[]) {
 
     write_field("initial_field.dat", phi);
 
-    int num_threads = omp_get_num_threads();
-    printf("INFO: using %i threads\n", num_threads);
+    printf("INFO: starting time integration loop\n");
 
     for(step = 0; step < NSTEPS; step++) {
         const double l = TAU_TO_LOG(current_conformal_time);
@@ -39,9 +37,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    printf("INFO: ending time integration loop\n");
+
     write_field("final_field.dat", phi);
     write_field("final_field_dot.dat", phi_dot);
-    printf("\n");
 
     deinit_state();
     deinit_detect_strings();

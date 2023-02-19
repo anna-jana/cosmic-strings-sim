@@ -52,8 +52,8 @@ k = k_abs_3d.ravel() # magnitude of wave vectors
 k_max = (
     (N / 2 if N % 2 == 0 else (N - 1) / 2) *
     1 / (dx_physical * N) *
-    2*np.pi *
-    np.sqrt(3)
+    2*np.pi
+    # * np.sqrt(3)
 )
 # assert np.isclose(k.max(), k_max)
 k_min = 0.0
@@ -86,7 +86,6 @@ W = compute_W(phi)
 # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
 W_fft = fftn(W)
 
-# suntract
 @jit
 def substract_wave_numbers(f, idx1, idx2, N):
     # here we use k * 2pi
@@ -107,9 +106,9 @@ def sum_spheres(idxs1, idxs2, N, f, integrant):
     for idx1_1, idx1_2, idx1_3 in idxs1:
         for idx2_1, idx2_2, idx2_3  in idxs2:
             c = integrant[
-                    substract_wave_numbers(idx1_1, idx2_1),
-                    substract_wave_numbers(idx1_2, idx2_2),
-                    substract_wave_numbers(idx1_3, idx2_3),
+                    substract_wave_numbers(f, idx1_1, idx2_1, N),
+                    substract_wave_numbers(f, idx1_2, idx2_2, N),
+                    substract_wave_numbers(f, idx1_3, idx2_3, N),
             ]
             out += c.real**2 + c.imag**2
     return out
@@ -178,6 +177,10 @@ P_tilde = compute_spectrum(theta_dot_tilde, L, nbins, bin_index)
 # \hat{P}(k) = k^2/L^3 \int d k' / 2\pi^2 M^{-1}(k, k') \tilde{P}(k#)
 P_ppse = bin_k**2 / L**3 / (2*np.pi**2) * bin_width * M_inv @ P_tilde
 
+P_ppse *= bin_k**4 # TODO: what why ???????
+missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
+P_ppse *= missing_prefactor
+
 P_full = compute_spectrum(theta_dot, L, nbins, bin_index)
 
 # plot all spectra computed
@@ -185,8 +188,9 @@ plt.figure(layout="constrained")
 plt.step(bins, P_full, where="pre", label="full spectrum including strings")
 plt.step(bins, P_tilde, ls="--", where="pre", label="masked uncorrected spectrum")
 plt.step(bins, P_ppse, where="pre", label="PPSE of free axions")
-plt.axvline(k_max / np.sqrt(3), ls="-", color="k", label="max usable grid wave number")
-plt.axvline(k_max, ls="--", color="k", label="max grid wave number")
+#plt.axvline(k_max / np.sqrt(3), ls="-", color="k", label="max usable grid wave number")
+#plt.axvline(k_max, ls="--", color="k", label="max grid wave number")
+
 plt.xlabel("k")
 plt.ylabel("P(k)")
 plt.xscale("log")
@@ -194,3 +198,5 @@ plt.yscale("log")
 plt.title(f"log = {data.log_end:.2f}")
 plt.legend()
 
+#plt.figure()
+#plt.loglog(bin_k, (P_tilde[0] / (bin_k[0]**4 * P_ppse[0]))**-1 * P_tilde / (bin_k**4 * P_ppse))

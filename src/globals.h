@@ -54,6 +54,7 @@ extern double TAU_START;
 extern double TAU_END;
 extern double TAU_SPAN;
 extern int NSTEPS;
+extern int num_threads;
 
 /*** spacial discretisation ***/
 extern double current_conformal_time; // simulation domain in time in conformal time

@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <complex.h>
 #include <assert.h>
+#include <time.h>
 
 struct Index {
     int ix, iy, iz;
@@ -107,6 +108,7 @@ static inline bool is_string_at_zx(int ix, int iy, int iz) {
 
 // find grid points close to strings
 static void find_string_points(void) {
+    clock_t start_clock = clock();
     clear_points();
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
@@ -121,6 +123,12 @@ static void find_string_points(void) {
             }
         }
     }
+    clock_t end_clock = clock();
+    double ms_elapsed = 1000.0 * (end_clock - start_clock) / (double) CLOCKS_PER_SEC;
+#ifdef DEBUG
+    printf("\nDEBUG: string points detection took: %lfms\n", ms_elapsed);
+    // sequential: ~133ms
+#endif
 }
 
 #define MAXIMAL_DISTANCE (3*2*2)
@@ -156,9 +164,6 @@ inline static int cyclic_dist_squared(struct Index i, struct Index j) {
 
 // grouping points into strings
 static void group_strings(void) {
-    if(step == NSTEPS - 1) {
-        printf("\n\npoints count: %i\n\n", points_length);
-    }
     int current_string_index = 0;
     while(points_length > 0) {
         struct Index initial_point = pop_point();

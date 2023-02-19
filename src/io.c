@@ -12,7 +12,7 @@
 
 void write_field(char* fname, const complex double* field) {
     char* fpath = create_output_filepath(fname);
-    printf("\nINFO: writing grid to %s\n", fpath);
+    printf("INFO: writing grid to %s\n", fpath);
     FILE* out = fopen(fpath, "w");
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
