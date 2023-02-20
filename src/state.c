@@ -34,7 +34,7 @@ fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
 // initial state generation
 #define FIELD_MAX (1 / sqrt(2))
 static fftw_complex *hat;
-static double* ks;
+double* ks;
 
 void init_parameters(int argc, char* argv[]) {
     // determine number of threads to use

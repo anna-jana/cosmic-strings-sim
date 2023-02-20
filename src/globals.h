@@ -61,6 +61,7 @@ extern double current_conformal_time; // simulation domain in time in conformal 
 extern int step;
 extern fftw_complex *phi, *phi_dot, *phi_dot_dot;
 extern fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
+extern double* ks;
 
 // for N see parameters, number of grid points in one dimension
 #define AT(ix, iy, iz) ((ix) + (iy) * (N) + (iz) * (N) * (N))
@@ -75,6 +76,15 @@ void make_step(void);
 void compute_next_force(void);
 
 /********************************* string_detection.c ****************************/
+struct Index {
+    int ix, iy, iz;
+};
+
+// thread save array list for string points
+extern int* points_capacities;
+extern int* points_lengths;
+extern struct Index** points;
+
 void init_detect_strings(void);
 void deinit_detect_strings(void);
 void detect_strings(void);

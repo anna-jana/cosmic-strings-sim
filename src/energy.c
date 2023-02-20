@@ -23,7 +23,6 @@ void deinit_energy_computation(void) {
     free(radial);
 }
 
-
 void compute_energy(void) {
     double a = TAU_TO_A(current_conformal_time);
     double a2 = a*a;

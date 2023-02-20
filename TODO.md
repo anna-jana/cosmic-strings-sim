@@ -31,3 +31,4 @@
 [ ] video of strings
 [~] I think the detected strings in c and python are not the same
 [x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)
+[x] parallel string point collection

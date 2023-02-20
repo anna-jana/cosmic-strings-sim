@@ -17,14 +17,10 @@
 #include <time.h>
 #include <omp.h>
 
-struct Index {
-    int ix, iy, iz;
-};
-
 // thread save array list for string points
-static int* points_capacities;
-static int* points_lengths;
-static struct Index** points;
+int* points_capacities;
+int* points_lengths;
+struct Index** points;
 
 static inline void clear_points(void) {
     for(int i = 0; i < num_threads; i++)

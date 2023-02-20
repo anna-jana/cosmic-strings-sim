@@ -94,9 +94,8 @@ def substract_wave_numbers(f, idx1, idx2, N):
     # substract wave_numbers (mod N)
     k_diff = (k - k_prime + N//2) % N - N//2
     # converet from wave number to index
-    if k_diff < 0:
-        k_diff += N
-    return k_diff
+    idx_diff = k_diff + N if k_diff < 0 else k_diff
+    return idx_diff
 
 # sum |\tilde W(k - k')|^2 for given indicies of wavevectors
 # belonging to the k or k' sphere respectifly
