@@ -2,6 +2,12 @@
 
 #include <complex.h>
 #include <stdlib.h>
+#include <stdio.h>
+
+#include <fftw3.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_permutation.h>
+#include <gsl/gsl_linalg.h>
 
 #define NBINS 20 // TODO: maybe make this a parameter later on
 #define RADIUS 3
@@ -11,23 +17,30 @@ static complex double* W;
 static complex double* W_fft;
 static complex double* theta_dot;
 static complex double* theta_dot_fft;
-static complex double* M;
-static complex double* M_inv;
-static double* spectrum;
+
 static double* surface_integral_element;
+static double* spectrum_uncorrected;
+static double* spectrum_corrected;
 
 static fftw_plan theta_dot_fft_plan;
 static fftw_plan W_fft_plan;
+
+static gsl_matrix* M;
+static gsl_matrix* M_inv;
+static gsl_permutation* p;
 
 void init_compute_spectrum(void) {
     W = malloc(sizeof(complex double) * N3);
     W_fft = malloc(sizeof(complex double) * N3);
     theta_dot = malloc(sizeof(complex double) * N3);
     theta_dot_fft = malloc(sizeof(complex double) * N3);
-    M = malloc(sizeof(complex double) * NBINS * NBINS);
-    M_inv = malloc(sizeof(complex double) * NBINS * NBINS);
-    spectrum = malloc(sizeof(double) * NBINS);
+    spectrum_uncorrected = malloc(sizeof(double) * NBINS);
+    spectrum_corrected = malloc(sizeof(double) * NBINS);
     surface_integral_element = malloc(sizeof(double) * N);
+
+    M = gsl_matrix_alloc(NBINS, NBINS);
+    M_inv = gsl_matrix_alloc(NBINS, NBINS);
+    p = gsl_permutation_alloc(NBINS);
 
     theta_dot_fft_plan = fftw_plan_dft_3d(N, N, N, theta_dot, theta_dot_fft, FFTW_FORWARD, FFTW_ESTIMATE);
     W_fft_plan = fftw_plan_dft_3d(N, N, N, W, W_fft, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -38,10 +51,14 @@ void deinit_compute_spectrum(void) {
     free(W_fft);
     free(theta_dot);
     free(theta_dot_fft);
-    free(M);
-    free(M_inv);
-    free(spectrum);
+
+    free(spectrum_uncorrected);
+    free(spectrum_corrected);
     free(surface_integral_element);
+
+    gsl_matrix_free(M);
+    gsl_matrix_free(M_inv);
+    gsl_permutation_free(p);
 
     fftw_destroy_plan(theta_dot_fft_plan);
     fftw_destroy_plan(W_fft_plan);
@@ -62,10 +79,10 @@ static inline int idx_to_k(int idx) {
     return idx < N / 2 ? idx : -N/2 + idx  - N/2;
 }
 
-static inline int substract_wave_numbers(int i, int j, int N) {
+static inline int substract_wave_numbers(int i, int j) {
     const int k = idx_to_k(i);
     const int k_prime = idx_to_k(j);
-    const int k_diff = MOD(k - k_prime + N/2, N) - N/2;
+    const int k_diff = mod(k - k_prime + N/2, N) - N/2;
     const int idx_diff = k_diff < 0 ? k_diff + N : k_diff;
     return idx_diff;
 }
@@ -120,12 +137,16 @@ void compute_spectrum(void) {
     // fft of W*dot theta
     fftw_execute(theta_dot_fft_plan);
 
-    // spectrum of W*dot theta
+    // compute surface integration spheres
+    struct Index** spheres = malloc(sizeof(struct Index*) * NBINS);
+    int* sphere_list_capacities = malloc(sizeof(int) * NBINS);
+    int* sphere_list_lengths = malloc(sizeof(int) * NBINS);
     for(int i = 0; i < NBINS; i++) {
-        spectrum[i] = 0.0;
+        sphere_list_capacities[i] = N;
+        sphere_list_lengths[i] = 0;
+        spheres[i] = malloc(sizeof(struct Index) * sphere_list_capacities[i]);
         const double bin_k_min = i * bin_width;
         const double bin_k_max = bin_k_min + bin_width;
-        const double bin_k = bin_k_min + bin_width/2.0;
         for(int iz = 0; iz < N; iz++) {
             for(int iy = 0; iy < N; iy++) {
                 for(int ix = 0; ix < N; ix++) {
@@ -135,25 +156,97 @@ void compute_spectrum(void) {
                     const double k2 = kx*kx + ky*ky + kz*kz;
                     if(k2 >= bin_k_min*bin_k_min &&
                        k2 <= bin_k_max*bin_k_max) {
-                        const double f = theta_dot_fft[AT(ix, iy, iz)];
-                        spectrum[i] += creal(f)*creal(f) + cimag(f)*cimag(f);
+                        if(sphere_list_lengths[i] >= sphere_list_capacities[i]) {
+                            sphere_list_capacities[i] *= 2;
+                            spheres[i] = realloc(spheres[i], sphere_list_capacities[i]);
+                        }
+                        const struct Index index = {ix, iy, iz};
+                        spheres[i][sphere_list_lengths[i]++] = index;
                     }
                 }
             }
         }
-        spectrum[i] *= surface_integral_element[i];
-        spectrum[i] *= bin_k*bin_k / (L*L*L) / (4 * PI) * 0.5;
+    }
+
+    // spectrum of W*dot theta
+    // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
+    for(int i = 0; i < NBINS; i++) {
+        spectrum_uncorrected[i] = 0.0;
+        const double bin_k = i * bin_width + bin_width/2.0;
+        for(int j = 0; j < sphere_list_lengths[i]; j++) {
+            struct Index index = spheres[i][j];
+            const double f = theta_dot_fft[AT(index.ix, index.iy, index.iz)];
+            spectrum_uncorrected[i] += creal(f)*creal(f) + cimag(f)*cimag(f);
+        }
+        spectrum_uncorrected[i] *= surface_integral_element[i];
+        spectrum_uncorrected[i] *= bin_k*bin_k / (L*L*L) / (4 * PI) * 0.5;
     }
 
     // W fft
     fftw_execute(W_fft_plan);
 
     // compute M
+    // M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
     for(int i = 0; i < NBINS; i++) {
-        for(int j = 0; j < NBINS; j++) {
+        for(int j = i; j < NBINS; j++) {
+            // integrate spheres
+            double s = 0.0;
+            for(int n1 = 0; n1 < sphere_list_lengths[i]; n1++) {
+                for(int n2 = 0; n2 < sphere_list_lengths[j]; n2++) {
+                    const struct Index idx1 = spheres[i][n1];
+                    const struct Index idx2 = spheres[j][n2];
+                    const int ix = substract_wave_numbers(idx1.ix, idx2.ix);
+                    const int iy = substract_wave_numbers(idx1.iy, idx2.iy);
+                    const int iz = substract_wave_numbers(idx1.iz, idx2.iz);
+                    const complex double f = W_fft[AT(ix, iy, iz)];
+                    const double Re = creal(f);
+                    const double Im = cimag(f);
+                    s += Re*Re + Im*Im;
+                }
+            }
+            s *= surface_integral_element[i] * surface_integral_element[j] / (pow(L, 6) * pow(4 * PI, 2));
+            gsl_matrix_set(M, i, j, s);
+            gsl_matrix_set(M, j, i, s);
         }
     }
+
     // invert M
+    // definition of M^-1:
+    // \int k'^2 dk' / 2\pi^2 M^{-1}(k, k') M(k', k'') = 2\pi^2/k^2 \delta(k - k'')
+    //
+    // bin_width * sum_{k'} k'^2 / (2*np.pi^2) * M^-1(k,k') M(k',k'') = 2pi^2/k^2 delta(k - k'')
+    // tilde M^-1 = bin_with / (2pi^2)^2 * k^2 k'^2 * M^-1(k, k')
+    // M^-1(k, k') = (2pi^2)^2 / (bin_with * k^2 k'^2) * tilde M^-1(k, k')
+    // sum_k' tilde M^-1(k, k')  M(k', k'') = delta(k, k'')
+    int sign;
+    gsl_linalg_LU_decomp(M, p, &sign);
+    gsl_linalg_LU_invert(M, p, M_inv);
+    for(int i = 0; i < NBINS; i++) {
+        for(int j = i; j < NBINS; j++) {
+            const double M_inv_elem = gsl_matrix_get(M_inv, i, j);
+            const double bin_k_1 = i * bin_width + bin_width/2;
+            const double bin_k_2 = j * bin_width + bin_width/2;
+            gsl_matrix_set(M_inv, i, j,
+                    M_inv_elem * pow(2 * PI, 2) / (bin_width * bin_k_1*bin_k_1 * bin_k_2*bin_k_2));
+        }
+    }
+
     // multiply spectrum by M
+    for(int i = 0; i < NBINS; i++) {
+        double s = 0.0;
+        for(int j = 0; j < NBINS; j++) {
+            s += gsl_matrix_get(M_inv, i, j) * spectrum_uncorrected[j];
+        }
+        spectrum_corrected[i] = s;
+        const double bin_k = i * bin_width + bin_width/2;
+        spectrum_corrected[i] *= pow(bin_k, 2) / pow(L, 3) / (2*PI*PI) * bin_width;
+    }
+
     // output spectrum
+    FILE* out = fopen(create_output_filepath("spectrum.dat"), "w");
+    for(int i = 0; i < NBINS; i++) {
+        const double bin_k = i * bin_width + bin_width/2;
+        fprintf(out, "%i %lf %lf\n", step, bin_k, spectrum_corrected[i]);
+    }
+    fclose(out);
 }
