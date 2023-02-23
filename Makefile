@@ -4,7 +4,7 @@ main:
 	gcc src/*.c -Wall -Wextra -std=c99 -pedantic -fopenmp -lgsl -lgslcblas -lm -lfftw3 -ggdb -O3 -o strings.out
 
 clean:
-	rm -rf run*_output strings.out
+	rm -rf run*_output
 
 pyenv:
 	conda create -n cosmic-strings python=3.10 numpy scipy matplotlib ipython numba

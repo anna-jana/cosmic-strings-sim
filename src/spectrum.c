@@ -10,7 +10,7 @@
 #include <gsl/gsl_linalg.h>
 
 #define NBINS 20 // TODO: maybe make this a parameter later on
-#define RADIUS 3
+#define RADIUS 2 // TODO: tune this parameter
 #define RADIUS2 (RADIUS*RADIUS)
 
 static complex double* W;
@@ -138,6 +138,7 @@ void compute_spectrum(void) {
     fftw_execute(theta_dot_fft_plan);
 
     // compute surface integration spheres
+    // TODO: these should be global
     struct Index** spheres = malloc(sizeof(struct Index*) * NBINS);
     int* sphere_list_capacities = malloc(sizeof(int) * NBINS);
     int* sphere_list_lengths = malloc(sizeof(int) * NBINS);
@@ -158,7 +159,7 @@ void compute_spectrum(void) {
                        k2 <= bin_k_max*bin_k_max) {
                         if(sphere_list_lengths[i] >= sphere_list_capacities[i]) {
                             sphere_list_capacities[i] *= 2;
-                            spheres[i] = realloc(spheres[i], sphere_list_capacities[i]);
+                            spheres[i] = realloc(spheres[i], sizeof(struct Index) * sphere_list_capacities[i]);
                         }
                         const struct Index index = {ix, iy, iz};
                         spheres[i][sphere_list_lengths[i]++] = index;
@@ -167,6 +168,9 @@ void compute_spectrum(void) {
             }
         }
     }
+    //for(int i = 0; i < NBINS; i++) {
+    //    printf("DEBUG: spheres[%i] = %i\n", i, sphere_list_lengths[i]);
+    //}
 
     // spectrum of W*dot theta
     // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
@@ -210,6 +214,10 @@ void compute_spectrum(void) {
         }
     }
 
+    // FILE* m_out = fopen(create_output_filepath("debug_M.dat"), "w");
+    // gsl_matrix_fprintf(m_out, M, "%f");
+    // fclose(m_out);
+
     // invert M
     // definition of M^-1:
     // \int k'^2 dk' / 2\pi^2 M^{-1}(k, k') M(k', k'') = 2\pi^2/k^2 \delta(k - k'')
@@ -239,14 +247,18 @@ void compute_spectrum(void) {
         }
         spectrum_corrected[i] = s;
         const double bin_k = i * bin_width + bin_width/2;
-        spectrum_corrected[i] *= pow(bin_k, 2) / pow(L, 3) / (2*PI*PI) * bin_width;
+        const double f = pow(bin_k, 2) / pow(L, 3) / (2*PI*PI) * bin_width;
+        spectrum_corrected[i] *= f;
     }
 
     // output spectrum
-    FILE* out = fopen(create_output_filepath("spectrum.dat"), "w");
+    const char* fname = create_output_filepath("spectrum.dat");
+    printf("INFO: writing spectrum to %s\n", fname);
+    FILE* out = fopen(fname, "w");
     for(int i = 0; i < NBINS; i++) {
         const double bin_k = i * bin_width + bin_width/2;
-        fprintf(out, "%i %lf %lf\n", step, bin_k, spectrum_corrected[i]);
+        fprintf(out, "%i %lf %e %e\n", step, bin_k, spectrum_uncorrected[i], spectrum_corrected[i]);
     }
     fclose(out);
 }
+

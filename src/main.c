@@ -33,7 +33,6 @@ int main(int argc, char* argv[]) {
             fflush(stdout);
             detect_strings();
             compute_energy();
-            compute_spectrum();
         }
     }
 
@@ -41,6 +40,8 @@ int main(int argc, char* argv[]) {
 
     write_field("final_field.dat", phi);
     write_field("final_field_dot.dat", phi_dot);
+
+    compute_spectrum();
 
     deinit_state();
     deinit_detect_strings();
