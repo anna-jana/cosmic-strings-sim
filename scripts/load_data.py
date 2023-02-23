@@ -29,6 +29,10 @@ class OutputDir:
             self.radial_gradient, self.radial_potential, self.radial_total, self.interaction, self.total = \
             np.loadtxt(self.create_output_path("energies.dat")).T
 
+
+        self.spectrum_step, self.bins, self.spectrum_uncorrected, self.spectrum = \
+                np.loadtxt(self.create_output_path("spectrum.dat"), unpack=True)
+
     def create_output_path(self, fname):
         return os.path.join(self.dirname, fname)
 

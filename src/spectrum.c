@@ -29,6 +29,8 @@ static gsl_matrix* M;
 static gsl_matrix* M_inv;
 static gsl_permutation* p;
 
+static FILE* out;
+
 void init_compute_spectrum(void) {
     W = malloc(sizeof(complex double) * N3);
     W_fft = malloc(sizeof(complex double) * N3);
@@ -44,6 +46,10 @@ void init_compute_spectrum(void) {
 
     theta_dot_fft_plan = fftw_plan_dft_3d(N, N, N, theta_dot, theta_dot_fft, FFTW_FORWARD, FFTW_ESTIMATE);
     W_fft_plan = fftw_plan_dft_3d(N, N, N, W, W_fft, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    const char* fname = create_output_filepath("spectrum.dat");
+    printf("INFO: writing spectrum to %s\n", fname);
+    out = fopen(fname, "w");
 }
 
 void deinit_compute_spectrum(void) {
@@ -62,6 +68,8 @@ void deinit_compute_spectrum(void) {
 
     fftw_destroy_plan(theta_dot_fft_plan);
     fftw_destroy_plan(W_fft_plan);
+
+    fclose(out);
 }
 
 static double compute_theta_dot(double a, complex double phi, complex double phi_dot) {
@@ -252,13 +260,9 @@ void compute_spectrum(void) {
     }
 
     // output spectrum
-    const char* fname = create_output_filepath("spectrum.dat");
-    printf("INFO: writing spectrum to %s\n", fname);
-    FILE* out = fopen(fname, "w");
     for(int i = 0; i < NBINS; i++) {
         const double bin_k = i * bin_width + bin_width/2;
         fprintf(out, "%i %lf %e %e\n", step, bin_k, spectrum_uncorrected[i], spectrum_corrected[i]);
     }
-    fclose(out);
 }
 
