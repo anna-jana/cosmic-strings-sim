@@ -5,10 +5,11 @@ from scipy.fft import fftn, fftfreq
 from numba import jit
 import cosmology, string_detection, load_data
 
-plt.ion()
+#plt.ion()
 
 # load data from simulation and calculate cosmological quantities
-data = load_data.OutputDir("../run1_output")
+data = load_data.OutputDir("run1_output")
+
 N, phi, phi_dot, dx, L = data.N, data.final_field, data.final_field_dot, data.dx, data.L
 a = cosmology.tau_to_a(data.tau_end)
 dx_physical = dx * a
@@ -135,7 +136,7 @@ for i in range(nbins):
     idxs.append(find_sphere(k_abs_3d, min_k, max_k))
 
 # cache the sum for M as they take a lot of time to compute
-fname = "M.npy"
+fname = os.path.join(os.path.dirname(__file__), "M.npy")
 if os.path.exists(fname):
     M = np.load(fname)
 else:
@@ -176,9 +177,9 @@ P_tilde = compute_spectrum(theta_dot_tilde, L, nbins, bin_index)
 # \hat{P}(k) = k^2/L^3 \int d k' / 2\pi^2 M^{-1}(k, k') \tilde{P}(k#)
 P_ppse = bin_k**2 / L**3 / (2*np.pi**2) * bin_width * M_inv @ P_tilde
 
-P_ppse *= bin_k**4 # TODO: what why ???????
-missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
-P_ppse *= missing_prefactor
+#P_ppse *= bin_k**4 # TODO: what why ???????
+#missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
+#P_ppse *= missing_prefactor
 
 P_full = compute_spectrum(theta_dot, L, nbins, bin_index)
 

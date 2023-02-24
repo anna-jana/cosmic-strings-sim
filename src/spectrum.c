@@ -101,14 +101,17 @@ void compute_spectrum(void) {
     const double a = TAU_TO_A(current_conformal_time);
 
     // compute the theta dot field
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++) {
         theta_dot[i] = compute_theta_dot(a, phi[i], phi_dot[i]);
     }
 
     // compute W
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++) {
         W[i] = 1 + 1*I;
     }
+    #pragma omp parallel for
     for(int thread_id = 0; thread_id < num_threads; thread_id++) {
         for(int i = 0; i < points_lengths[thread_id]; i++) {
             // set sphere of RADIUS RADIUS around p to 1
@@ -127,6 +130,7 @@ void compute_spectrum(void) {
     }
 
     // mask the strings out by multiplying point wise with W
+    #pragma omp parallel for
     for(int i = 0; i < N3; i++) {
         theta_dot[i] *= W[i];
     }
@@ -136,6 +140,7 @@ void compute_spectrum(void) {
     const double kmax = calc_k_max_grid(N, dx_physical);
     const double Delta_k = 2*PI/dx_physical;
     const double bin_width = kmax / NBINS;
+    #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         const double vol = 4.0/3.0 * PI * (pow((i + 1)*bin_width, 3) - pow(i*bin_width, 3));
         const double area = 4*PI * pow(i*bin_width + bin_width/2, 2);
@@ -150,6 +155,8 @@ void compute_spectrum(void) {
     struct Index** spheres = malloc(sizeof(struct Index*) * NBINS);
     int* sphere_list_capacities = malloc(sizeof(int) * NBINS);
     int* sphere_list_lengths = malloc(sizeof(int) * NBINS);
+    double* physical_ks = fft_freq(N, dx_physical);
+    #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         sphere_list_capacities[i] = N;
         sphere_list_lengths[i] = 0;
@@ -159,9 +166,9 @@ void compute_spectrum(void) {
         for(int iz = 0; iz < N; iz++) {
             for(int iy = 0; iy < N; iy++) {
                 for(int ix = 0; ix < N; ix++) {
-                    const double kx = ks[ix];
-                    const double ky = ks[iy];
-                    const double kz = ks[iz];
+                    const double kx = physical_ks[ix];
+                    const double ky = physical_ks[iy];
+                    const double kz = physical_ks[iz];
                     const double k2 = kx*kx + ky*ky + kz*kz;
                     if(k2 >= bin_k_min*bin_k_min &&
                        k2 <= bin_k_max*bin_k_max) {
@@ -176,12 +183,11 @@ void compute_spectrum(void) {
             }
         }
     }
-    //for(int i = 0; i < NBINS; i++) {
-    //    printf("DEBUG: spheres[%i] = %i\n", i, sphere_list_lengths[i]);
-    //}
+    free(physical_ks);
 
     // spectrum of W*dot theta
     // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
+    #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         spectrum_uncorrected[i] = 0.0;
         const double bin_k = i * bin_width + bin_width/2.0;
@@ -199,10 +205,14 @@ void compute_spectrum(void) {
 
     // compute M
     // M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
+    // NOTE: this is the computationally most expensive part!
+    const double f = pow(L, 6) * pow(4 * PI, 2);
     for(int i = 0; i < NBINS; i++) {
         for(int j = i; j < NBINS; j++) {
+            printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, N, N);
             // integrate spheres
             double s = 0.0;
+            #pragma omp parallel for collapse(2) reduction(+:s)
             for(int n1 = 0; n1 < sphere_list_lengths[i]; n1++) {
                 for(int n2 = 0; n2 < sphere_list_lengths[j]; n2++) {
                     const struct Index idx1 = spheres[i][n1];
@@ -216,7 +226,7 @@ void compute_spectrum(void) {
                     s += Re*Re + Im*Im;
                 }
             }
-            s *= surface_integral_element[i] * surface_integral_element[j] / (pow(L, 6) * pow(4 * PI, 2));
+            s *= surface_integral_element[i] * surface_integral_element[j] / f;
             gsl_matrix_set(M, i, j, s);
             gsl_matrix_set(M, j, i, s);
         }
@@ -237,6 +247,7 @@ void compute_spectrum(void) {
     int sign;
     gsl_linalg_LU_decomp(M, p, &sign);
     gsl_linalg_LU_invert(M, p, M_inv);
+    #pragma omp parallel for collapse(2)
     for(int i = 0; i < NBINS; i++) {
         for(int j = i; j < NBINS; j++) {
             const double M_inv_elem = gsl_matrix_get(M_inv, i, j);
@@ -248,6 +259,7 @@ void compute_spectrum(void) {
     }
 
     // multiply spectrum by M
+    #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         double s = 0.0;
         for(int j = 0; j < NBINS; j++) {
