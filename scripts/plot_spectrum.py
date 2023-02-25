@@ -2,7 +2,7 @@
 
 import numpy as np, matplotlib.pyplot as plt
 import sys, os.path
-import load_data, spectrum
+import load_data
 
 data = load_data.OutputDir(sys.argv[1])
 spectrum_step = data.spectrum_step.max()
