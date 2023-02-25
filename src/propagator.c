@@ -10,7 +10,7 @@
 #include "globals.h"
 
 void make_step(void) {
-    current_conformal_time = TAU_START + step * Delta_tau;
+    current_conformal_time = TAU_START + (step + 1) * Delta_tau;
 
     // propagate PDE using velocity verlet algorithm
     // update the field ("position")

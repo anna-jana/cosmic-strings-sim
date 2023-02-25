@@ -128,12 +128,12 @@ def compute_M_inv(M, bin_width, bin_k):
             M_inv[i, j] *= (2*np.pi**2)**2 / (bin_width * bin_k[i]**2 * bin_k[j]**2)
     return M_inv
 
-def main():
+if __name__ == "__main__":
     # load data from simulation and calculate cosmological quantities
     data = load_data.OutputDir("run1_output")
     N, phi, phi_dot, dx, L = data.N, data.final_field, data.final_field_dot, data.dx, data.L
 
-    a = cosmology.tau_to_a(data.tau_end)
+    a = cosmology.tau_to_a(data.tau_final)
     dx_physical = dx * a
     # TODO: physical or comoving coordinates? (I think its the physical)
     k_1d = 2*np.pi * fftfreq(N, dx_physical) # wave numbers along one dimensions
@@ -191,4 +191,5 @@ def main():
     plt.title(f"log = {data.log_end:.2f}")
     plt.legend()
 
-main()
+print(f"{dx = }, {a = }, {nbins = }")
+print(f"{dx_physical = }, {k_max = }, {Delta_k = }, {bin_width = }")

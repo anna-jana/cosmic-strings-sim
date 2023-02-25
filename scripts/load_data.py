@@ -13,10 +13,13 @@ class OutputDir:
         self.log_end = parameter["LOG_END"]
         self.L = parameter["L"]
         self.N = parameter["N"]
-        self.dtau = parameter["DELTA"] if "DELTA" in parameter else parameter["Delta_tau"]
+        self.dtau = parameter["Delta_tau"]
+        self.log_final = parameter["LOG_FINAL"]
+        self.tau_final = parameter["TAU_FINAL"]
 
         self.tau_start = cosmology.log_to_tau(self.log_start)
         self.tau_end = cosmology.log_to_tau(self.log_end)
+        #self.tau_final = cosmology.log_to_tau(self.log_final)
         self.dx = self.L / self.N
 
         self.final_field = self.load_field("final_field.dat")
@@ -29,9 +32,11 @@ class OutputDir:
             self.radial_gradient, self.radial_potential, self.radial_total, self.interaction, self.total = \
             np.loadtxt(self.create_output_path("energies.dat")).T
 
-
-        self.spectrum_step, self.bins, self.spectrum_uncorrected, self.spectrum = \
-                np.loadtxt(self.create_output_path("spectrum.dat"), unpack=True)
+        try:
+            self.spectrum_step, self.bins, self.spectrum_uncorrected, self.spectrum = \
+                    np.loadtxt(self.create_output_path("spectrum.dat"), unpack=True)
+        except:
+            pass
 
     def create_output_path(self, fname):
         return os.path.join(self.dirname, fname)

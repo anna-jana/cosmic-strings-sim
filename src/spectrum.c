@@ -147,6 +147,14 @@ void compute_spectrum(void) {
     const double kmax = calc_k_max_grid(N, dx_physical);
     const double Delta_k = 2*PI/dx_physical;
     const double bin_width = kmax / NBINS;
+
+#ifdef DEBUG
+    printf("DEBUG: current_conformal_time = %lf\n", current_conformal_time);
+    printf("DEBUG: dx = %lf, a = %lf, NBINS = %i\n", dx, a, NBINS);
+    printf("DEBUG: dx_physical = %lf, kmax = %lf, Delta_k = %lf, bin_width = %lf\n",
+            dx_physical, kmax, Delta_k, bin_width);
+#endif
+
     #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         const double vol = 4.0/3.0 * PI * (pow((i + 1)*bin_width, 3) - pow(i*bin_width, 3));
@@ -215,7 +223,9 @@ void compute_spectrum(void) {
     const double f = pow(L, 6) * pow(4 * PI, 2);
     for(int i = 0; i < NBINS; i++) {
         for(int j = i; j < NBINS; j++) {
+#ifdef DEBUG
             printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, N, N);
+#endif
             // integrate spheres
             double s = 0.0;
             #pragma omp parallel for collapse(2) reduction(+:s)
