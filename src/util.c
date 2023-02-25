@@ -4,8 +4,7 @@
 
 /*************************************** math functions ********************************/
 // generate an array with the frequencies (in our case wavenumber) returned by the discrete fourier transform
-double* fft_freq(int n, double d) {
-    double* freq = malloc(sizeof(double) * n);
+void fill_fft_freq(int n, double d, double* freq) {
     if(n % 2 == 0) {
         for(int i = 0; i <= n / 2 - 1; i++)
             freq[i] = i / (d*n);
@@ -19,6 +18,11 @@ double* fft_freq(int n, double d) {
     }
     for(int i = 0; i < n; i++)
         freq[i] *= 2 * PI;
+}
+
+double* fft_freq(int n, double d) {
+    double* freq = malloc(sizeof(double) * n);
+    fill_fft_freq(n, d, freq);
     return freq;
 }
 

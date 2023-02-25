@@ -18,6 +18,8 @@ static complex double* W_fft;
 static complex double* theta_dot;
 static complex double* theta_dot_fft;
 
+static double* physical_ks;
+
 static double* surface_integral_element;
 static double* spectrum_uncorrected;
 static double* spectrum_corrected;
@@ -36,9 +38,12 @@ void init_compute_spectrum(void) {
     W_fft = malloc(sizeof(complex double) * N3);
     theta_dot = malloc(sizeof(complex double) * N3);
     theta_dot_fft = malloc(sizeof(complex double) * N3);
+
+    physical_ks = malloc(sizeof(double) * N);
+
+    surface_integral_element = malloc(sizeof(double) * N);
     spectrum_uncorrected = malloc(sizeof(double) * NBINS);
     spectrum_corrected = malloc(sizeof(double) * NBINS);
-    surface_integral_element = malloc(sizeof(double) * N);
 
     M = gsl_matrix_alloc(NBINS, NBINS);
     M_inv = gsl_matrix_alloc(NBINS, NBINS);
@@ -57,6 +62,8 @@ void deinit_compute_spectrum(void) {
     free(W_fft);
     free(theta_dot);
     free(theta_dot_fft);
+
+    free(physical_ks);
 
     free(spectrum_uncorrected);
     free(spectrum_corrected);
@@ -155,7 +162,7 @@ void compute_spectrum(void) {
     struct Index** spheres = malloc(sizeof(struct Index*) * NBINS);
     int* sphere_list_capacities = malloc(sizeof(int) * NBINS);
     int* sphere_list_lengths = malloc(sizeof(int) * NBINS);
-    double* physical_ks = fft_freq(N, dx_physical);
+    fill_fft_freq(N, dx_physical, physical_ks);
     #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
         sphere_list_capacities[i] = N;
@@ -183,7 +190,6 @@ void compute_spectrum(void) {
             }
         }
     }
-    free(physical_ks);
 
     // spectrum of W*dot theta
     // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2

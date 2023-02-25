@@ -12,6 +12,7 @@
 /******************************** utils.c **************************/
 #define PI 3.14159265358979323846
 double* fft_freq(int n, double d);
+void fill_fft_freq(int n, double d, double* freq);
 double calc_k_max_grid(int n, double d);
 double random_uniform(double min, double max);
 int mod(int a, int b);
