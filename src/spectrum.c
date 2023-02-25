@@ -224,7 +224,7 @@ void compute_spectrum(void) {
     for(int i = 0; i < NBINS; i++) {
         for(int j = i; j < NBINS; j++) {
 #ifdef DEBUG
-            printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, N, N);
+            printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, NBINS, NBINS);
 #endif
             // integrate spheres
             double s = 0.0;

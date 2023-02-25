@@ -21,7 +21,7 @@ def compute_W(phi):
     ps = np.array(list(zip(*np.where(strings))))
     d_min = int(np.ceil(np.sqrt(3) * 1))
     W = np.ones((N, N, N))
-    return W # for debugging, this should give the same spectrum as without the ppse
+    #return W # NOTE: for debugging, this should give the same spectrum as without the ppse
     offsets = [(d1, d2, d3)
         for d1 in range(-d_min, d_min + 1)
             for d2 in range(-d_min, d_min + 1)
@@ -128,57 +128,57 @@ def compute_M_inv(M, bin_width, bin_k):
             M_inv[i, j] *= (2*np.pi**2)**2 / (bin_width * bin_k[i]**2 * bin_k[j]**2)
     return M_inv
 
+# load data from simulation and calculate cosmological quantities
+data = load_data.OutputDir("run1_output")
+N, phi, phi_dot, dx, L = data.N, data.final_field, data.final_field_dot, data.dx, data.L
+
+a = cosmology.tau_to_a(data.tau_final)
+dx_physical = dx * a
+# TODO: physical or comoving coordinates? (I think its the physical)
+k_1d = 2*np.pi * fftfreq(N, dx_physical) # wave numbers along one dimensions
+k1, k2, k3 = np.meshgrid(k_1d, k_1d, k_1d) # 3d grid of wave numbers
+k_abs_3d = np.sqrt(k1**2 + k2**2 + k3**2)
+
+# histogram for functions of |k| e.g. the spectrum P(|k|)
+k_max = (
+    (N / 2 if N % 2 == 0 else (N - 1) / 2) *
+    1 / (dx_physical * N) *
+    2*np.pi
+    # * np.sqrt(3)
+) # assert np.isclose(k.max(), k_max)
+nbins = 20
+bin_width = k_max / nbins # k_min = 0
+bin_start = np.arange(nbins) * bin_width
+bin_end = bin_start + bin_width
+bin_k = bin_start + bin_width/2
+
+# prefactors for surface integration on the grid
+vol = 4/3*np.pi * ((bin_start + bin_width)**3 - bin_start**3)
+area = 4*np.pi * bin_k**2
+Delta_k = k_1d[1] - k_1d[0] # spacing of the wave numbers
+surface_element = Delta_k**3 / vol * area
+
+W = compute_W(phi)
+spheres = compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d)
+W_fft = fftn(W)
+M = compute_M(N, nbins, W_fft, surface_element, L)
+M_inv = compute_M_inv(M, bin_width, bin_k)
+
+theta_dot = compute_theta_dot(phi, phi_dot, a)
+theta_dot_tilde = theta_dot * W
+
+# full P = spectrum ( \dot{\theta} )
+P_full = compute_spectrum(theta_dot, L, spheres, bin_k, surface_element)
+# \tilde P = spectrum ( \dot{\theta} * W )
+P_tilde = compute_spectrum(theta_dot_tilde, L, spheres, bin_k, surface_element)
+# \hat P = M_inv spectrum ( \dot{\theta} * W )
+P_ppse = bin_k**2 / L**3 / (2*np.pi**2) * bin_width * M_inv @ P_tilde
+
+#P_ppse *= bin_k**4 # TODO: what why ???????
+#missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
+#P_ppse *= missing_prefactor
+
 if __name__ == "__main__":
-    # load data from simulation and calculate cosmological quantities
-    data = load_data.OutputDir("run1_output")
-    N, phi, phi_dot, dx, L = data.N, data.final_field, data.final_field_dot, data.dx, data.L
-
-    a = cosmology.tau_to_a(data.tau_final)
-    dx_physical = dx * a
-    # TODO: physical or comoving coordinates? (I think its the physical)
-    k_1d = 2*np.pi * fftfreq(N, dx_physical) # wave numbers along one dimensions
-    k1, k2, k3 = np.meshgrid(k_1d, k_1d, k_1d) # 3d grid of wave numbers
-    k_abs_3d = np.sqrt(k1**2 + k2**2 + k3**2)
-
-    # histogram for functions of |k| e.g. the spectrum P(|k|)
-    k_max = (
-        (N / 2 if N % 2 == 0 else (N - 1) / 2) *
-        1 / (dx_physical * N) *
-        2*np.pi
-        # * np.sqrt(3)
-    ) # assert np.isclose(k.max(), k_max)
-    nbins = 20
-    bin_width = k_max / nbins # k_min = 0
-    bin_start = np.arange(nbins) * bin_width
-    bin_end = bin_start + bin_width
-    bin_k = bin_start + bin_width/2
-
-    # prefactors for surface integration on the grid
-    vol = 4/3*np.pi * ((bin_start + bin_width)**3 - bin_start**3)
-    area = 4*np.pi * bin_k**2
-    Delta_k = k_1d[1] - k_1d[0] # spacing of the wave numbers
-    surface_element = Delta_k**3 / vol * area
-
-    W = compute_W(phi)
-    spheres = compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d)
-    W_fft = fftn(W)
-    M = compute_M(N, nbins, W_fft, surface_element, L)
-    M_inv = compute_M_inv(M, bin_width, bin_k)
-
-    theta_dot = compute_theta_dot(phi, phi_dot, a)
-    theta_dot_tilde = theta_dot * W
-
-    # full P = spectrum ( \dot{\theta} )
-    P_full = compute_spectrum(theta_dot, L, spheres, bin_k, surface_element)
-    # \tilde P = spectrum ( \dot{\theta} * W )
-    P_tilde = compute_spectrum(theta_dot_tilde, L, spheres, bin_k, surface_element)
-    # \hat P = M_inv spectrum ( \dot{\theta} * W )
-    P_ppse = bin_k**2 / L**3 / (2*np.pi**2) * bin_width * M_inv @ P_tilde
-
-    #P_ppse *= bin_k**4 # TODO: what why ???????
-    #missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
-    #P_ppse *= missing_prefactor
-
     # plot all spectra computed
     plt.figure(layout="constrained")
     plt.step(bin_start, P_full, where="pre", label="full spectrum including strings")
@@ -190,6 +190,5 @@ if __name__ == "__main__":
     plt.yscale("log")
     plt.title(f"log = {data.log_end:.2f}")
     plt.legend()
+    plt.show()
 
-print(f"{dx = }, {a = }, {nbins = }")
-print(f"{dx_physical = }, {k_max = }, {Delta_k = }, {bin_width = }")
