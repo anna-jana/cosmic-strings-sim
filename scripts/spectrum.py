@@ -50,9 +50,9 @@ def find_sphere(k_1d, k_abs_3d, min_k, max_k):
 def compute_spectrum(field, L, spheres, bin_k, surface_element):
     integrant = np.abs(fftn(field))**2 # TODO: is k**2 right here or bin_?????
     spectrum = np.array([
-            np.sum(integrant[spheres[i].T[0], spheres[i].T[1], spheres[i].T[2]]) * surface_element[i]
+            np.sum(integrant[spheres[i].T[0], spheres[i].T[1], spheres[i].T[2]])
             for i in range(len(bin_k))])
-    spectrum *= bin_k**2 / L**3 / (4*np.pi) * 0.5
+    spectrum *= bin_k**2 / L**3 / (4*np.pi) * 0.5 * surface_element
     return np.array(spectrum)
 
 @jit
@@ -83,7 +83,6 @@ def sum_spheres(sphere1, sphere2, N, f, integrant):
 
 def compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d):
     # compute all the spheres
-    f = np.round(fftfreq(N) * N).astype("int")
     spheres = []
     for i in range(nbins):
         min_k = i * bin_width
@@ -93,6 +92,7 @@ def compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d):
 
 # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
 def compute_M(N, nbins, W_fft, surface_element, L):
+    f = np.round(fftfreq(N) * N).astype("int")
     # cache the sum for M as they take a lot of time to compute
     fname = os.path.join(os.path.dirname(__file__), "M.npy")
     if os.path.exists(fname):
