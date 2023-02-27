@@ -216,6 +216,27 @@ void compute_spectrum(void) {
     }
 #endif
 
+    printf("DEBUG: output of theta_dot * W ...");
+    fflush(stdout);
+    FILE* masked_theta_dot_out = fopen(create_output_filepath("masked_theta_dot_out.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        fprintf(masked_theta_dot_out, "%.15e\n", creal(theta_dot[i]));
+    }
+    fclose(masked_theta_dot_out);
+    printf(" done\n");
+
+    printf("DEBUG: output of FFT(theta_dot * W)^2 ...");
+    fflush(stdout);
+    FILE* masked_theta_dot_fft_out = fopen(create_output_filepath("masked_theta_dot_fft_out.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        const double Re = creal(theta_dot_fft[i]);
+        const double Im = cimag(theta_dot_fft[i]);
+        fprintf(masked_theta_dot_fft_out, "%.15e\n", Re*Re + Im*Im);
+    }
+    fclose(masked_theta_dot_fft_out);
+    printf(" done\n");
+
+
     // spectrum of W*dot theta
     // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
     #pragma omp parallel for schedule(dynamic)
@@ -243,6 +264,9 @@ void compute_spectrum(void) {
 #ifdef DEBUG
             printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, NBINS, NBINS);
 #endif
+            gsl_matrix_set(M, i, j, i == j);
+            gsl_matrix_set(M, j, i, i == j);
+            continue;
             // integrate spheres
             double s = 0.0;
             #pragma omp parallel for collapse(2) reduction(+:s)
@@ -307,7 +331,7 @@ void compute_spectrum(void) {
     // output spectrum
     for(int i = 0; i < NBINS; i++) {
         const double bin_k = i * bin_width + bin_width/2;
-        fprintf(out, "%i %lf %e %e\n", step, bin_k, spectrum_uncorrected[i], spectrum_corrected[i]);
+        fprintf(out, "%i %.15e %.15e %.15e\n", step, bin_k, spectrum_uncorrected[i], spectrum_corrected[i]);
     }
 }
 

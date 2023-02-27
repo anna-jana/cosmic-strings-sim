@@ -107,7 +107,7 @@ void compute_energy(void) {
     const double mean_radial_total = mean_radial_kinetic + mean_radial_gradient + mean_radial_potential;
     const double mean_total = mean_axion_total + mean_radial_total + mean_interaction;
 
-    fprintf(out_energies, "%i %lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
+    fprintf(out_energies, "%i %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n",
             step,
             mean_axion_kinetic, mean_axion_gradient, mean_axion_total,
             mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_radial_total,

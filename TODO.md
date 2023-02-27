@@ -32,3 +32,10 @@
 [~] I think the detected strings in c and python are not the same
 [x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)
 [x] parallel string point collection
+[ ] fix difference between python and c spectrum code
+    * [x] bins of the spectrum are diferent
+    * [x] shape is the same
+    * [ ] scale is different
+    * [x] theta_dot * W is the same
+    * [ ] ffts of theta_dot * W are different
+    * [x] pyfftw yields the same result as scipy in the python code

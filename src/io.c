@@ -17,7 +17,7 @@ void write_field(char* fname, const complex double* field) {
     for(int iz = 0; iz < N; iz++) {
         for(int iy = 0; iy < N; iy++) {
             for(int ix = 0; ix < N; ix++) {
-                fprintf(out, "%lf+%lfj ",
+                fprintf(out, "%.15e+%.15ej ",
                         creal(field[AT(ix, iy, iz)]),
                         cimag(field[AT(ix, iy, iz)]));
             }
@@ -107,7 +107,7 @@ bool parse_arg(int argc, char* argv[], char* arg, char type, bool required, void
         }
     } else {
         fprintf(stderr,
-                "expected argument after option %s but it was the last arguemnt\n",
+                "expected argument after option %s but it was the last argument\n",
                 arg);
         exit(-1);
     }

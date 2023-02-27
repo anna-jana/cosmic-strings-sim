@@ -5,6 +5,15 @@ from scipy.fft import fftn, fftfreq
 from numba import jit
 import cosmology, string_detection, load_data
 
+# replaces scipy.fft.fftn for testing purposes
+#import pyfftw
+#def fftn(xs):
+#    xs = xs.astype("complex")
+#    out = np.empty_like(xs)
+#    plan = pyfftw.FFTW(xs, out, axes=(0,1,2), direction="FFTW_FORWARD")
+#    plan.execute()
+#    return out
+
 # get \dot{\theta} from \phi and \dot{\phi}
 def compute_theta_dot(phi, phi_dot, a):
     d_theta_d_tau = (
@@ -116,16 +125,12 @@ def compute_M(N, nbins, W_fft, surface_element, L):
 def compute_M_inv(M, bin_width, bin_k):
     # definition of M^-1:
     # \int k'^2 dk' / 2\pi^2 M^{-1}(k, k') M(k', k'') = 2\pi^2/k^2 \delta(k - k'')
-
     # bin_width * sum_{k'} k'^2 / (2*np.pi^2) * M^-1(k,k') M(k',k'') = 2pi^2/k^2 delta(k - k'')
     # tilde M^-1 = bin_width / (2pi^2)^2 * k^2 k'^2 * M^-1(k, k')
     # M^-1(k, k') = (2pi^2)^2 / (bin_width * k^2 k'^2) * tilde M^-1(k, k')
     # sum_k' tilde M^-1(k, k')  M(k', k'') = delta(k, k'')
-    nbins = M.shape[0]
     M_inv = np.linalg.inv(M)
-    for i in range(nbins):
-        for j in range(nbins):
-            M_inv[i, j] *= (2*np.pi**2)**2 / (bin_width * bin_k[i]**2 * bin_k[j]**2)
+    M_inv *= (2*np.pi**2)**2 / (bin_width * bin_k[:, None]**2 * bin_k[None, :]**2)
     return M_inv
 
 # load data from simulation and calculate cosmological quantities
@@ -191,4 +196,9 @@ if __name__ == "__main__":
     plt.title(f"log = {data.log_end:.2f}")
     plt.legend()
     plt.show()
+
+c_field = np.loadtxt("run1_output/masked_theta_dot_out.dat").reshape(N,N,N)
+c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat").reshape(N,N,N)
+py_field = theta_dot_tilde # .transpose(2,1,0)
+py_fft = np.abs(fftn(py_field))**2
 
