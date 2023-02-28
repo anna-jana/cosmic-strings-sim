@@ -20,11 +20,13 @@
 // thread save array list for string points
 int* points_capacities;
 int* points_lengths;
+int* last_points_lengths;
 struct Index** points;
 
 static inline void clear_points(void) {
-    for(int i = 0; i < num_threads; i++)
-        points_lengths[i] = 0;
+    for(int thread_id = 0; thread_id < num_threads; thread_id++) {
+        last_points_lengths[thread_id] = points_lengths[thread_id] = 0;
+    }
 }
 
 static inline void add_point(struct Index p) {
@@ -34,25 +36,31 @@ static inline void add_point(struct Index p) {
         points[thread_id] = realloc(points[thread_id],
                 sizeof(struct Index) * points_capacities[thread_id]);
     }
-    points[thread_id][points_lengths[thread_id]++] = p;
+    int i = points_lengths[thread_id];
+    points[thread_id][i] = p;
+    points_lengths[thread_id]++;
+    last_points_lengths[thread_id]++;
 }
 
 static inline void remove_point(int thread_id, int i) {
-    points[thread_id][i] = points[thread_id][--points_lengths[thread_id]];
+    struct Index tmp = points[thread_id][i];
+    points[thread_id][i] = points[thread_id][points_lengths[thread_id] - 1];
+    points[thread_id][points_lengths[thread_id] - 1] = tmp;
+    points_lengths[thread_id]--;
 }
 
 static inline struct Index pop_point(void) {
-    for(int i = num_threads - 1; i >= 0; i--) {
-        if(points_lengths[i] > 0) {
-            return points[i][--points_lengths[i]];
+    for(int thread_id = num_threads - 1; thread_id >= 0; thread_id--) {
+        if(points_lengths[thread_id] > 0) {
+            return points[thread_id][--points_lengths[thread_id]];
         }
     }
     assert(false);
 }
 
 static inline bool are_points_empty(void) {
-    for(int i = 0; i < num_threads; i++) {
-        if(points_lengths[i] > 0)
+    for(int thread_id = 0; thread_id < num_threads; thread_id++) {
+        if(points_lengths[thread_id] > 0)
             return false;
     }
     return true;
@@ -68,11 +76,12 @@ void init_detect_strings(void) {
     printf("INFO: writing strings to %s\n", string_filepath);
     out_strings = fopen(string_filepath, "w");
 
-    points_capacities = malloc(num_threads * sizeof(int*));
+    points_capacities = malloc(sizeof(int) * num_threads);
     for(int i = 0; i < num_threads; i++)
         points_capacities[i] = 2*N;
 
-    points_lengths = malloc(sizeof(int*) * num_threads);
+    points_lengths = malloc(sizeof(int) * num_threads);
+    last_points_lengths = malloc(sizeof(int) * num_threads);
     clear_points();
 
     points = malloc(sizeof(struct Index*) * num_threads);
@@ -221,6 +230,7 @@ static void group_strings(void) {
                                 initial_point.ix, initial_point.iy, initial_point.iz);
                         current_string_length++;
                     }
+                    break;
                 }
             }
 
@@ -229,7 +239,7 @@ static void group_strings(void) {
             int min_i = -1;
             int min_thread_id = -1;
             for(int thread_id = 0; thread_id < num_threads; thread_id++) {
-                for(int i = 0; i < points_lengths[i]; i++) {
+                for(int i = 0; i < points_lengths[thread_id]; i++) {
                     const struct Index p = points[thread_id][i];
                     const double d = cyclic_dist_squared(p, last_point);
                     if(d < min_d) {
@@ -258,7 +268,7 @@ static void group_strings(void) {
             fprintf(out_strings, "%i %i %i %i %i\n", step, current_string_index,
                     last_point.ix, last_point.iy, last_point.iz);
             current_string_length++;
-            // remove from poinnts left
+            // remove from points left
             remove_point(min_thread_id, min_i);
         }
         current_string_index++;

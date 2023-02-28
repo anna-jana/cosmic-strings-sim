@@ -84,6 +84,7 @@ struct Index {
 // thread save array list for string points
 extern int* points_capacities;
 extern int* points_lengths;
+extern int* last_points_lengths;
 extern struct Index** points;
 
 void init_detect_strings(void);

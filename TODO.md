@@ -33,9 +33,12 @@
 [x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)
 [x] parallel string point collection
 [ ] fix difference between python and c spectrum code
-    * [x] bins of the spectrum are diferent
+    * [x] bins of the spectrum are diferent -> fixed
     * [x] shape is the same
     * [ ] scale is different
-    * [x] theta_dot * W is the same
-    * [ ] ffts of theta_dot * W are different
-    * [x] pyfftw yields the same result as scipy in the python code
+    * ffts of theta_dot * W are different
+    * pyfftw yields the same result as scipy in the python code
+    * theta_dot * W are almost the same except for some where the python code is = 0 but the c code is not
+    * W in the c code is alsways = 1
+    * the c ode was using points_lengths from string_detection but while connecting points into strings, they were set to 0
+    * trying to fix that: we have adress errors now -> fixed (bug in string detection)

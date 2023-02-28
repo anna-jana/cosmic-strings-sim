@@ -51,7 +51,7 @@ void init_compute_spectrum(void) {
         spheres[i] = malloc(sizeof(struct Index) * sphere_list_capacities[i]);
     }
 
-    surface_integral_element = malloc(sizeof(double) * N);
+    surface_integral_element = malloc(sizeof(double) * NBINS);
     spectrum_uncorrected = malloc(sizeof(double) * NBINS);
     spectrum_corrected = malloc(sizeof(double) * NBINS);
 
@@ -129,6 +129,14 @@ void compute_spectrum(void) {
     for(int i = 0; i < N3; i++) {
         theta_dot[i] = compute_theta_dot(a, phi[i], phi_dot[i]);
     }
+#ifdef DEBUG
+    printf("DEBUG: output of theta_dot\n");
+    FILE* theta_dot_out = fopen(create_output_filepath("theta_dot.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        fprintf(theta_dot_out, "%.15e\n", creal(theta_dot[i]));
+    }
+    fclose(theta_dot_out);
+#endif
 
     // compute W
     #pragma omp parallel for
@@ -137,14 +145,14 @@ void compute_spectrum(void) {
     }
     #pragma omp parallel for
     for(int thread_id = 0; thread_id < num_threads; thread_id++) {
-        for(int i = 0; i < points_lengths[thread_id]; i++) {
+        for(int i = 0; i < last_points_lengths[thread_id]; i++) {
             // set sphere of RADIUS RADIUS around p to 1
             for(int x_offset = -RADIUS; x_offset <= RADIUS; x_offset++) {
                 for(int y_offset = -RADIUS; y_offset <= RADIUS; y_offset++) {
                     for(int z_offset = -RADIUS; z_offset <= RADIUS; z_offset++) {
                         const double r2 = x_offset*x_offset + y_offset*y_offset + z_offset*z_offset;
                         const struct Index p = points[thread_id][i];
-                        if(r2 < RADIUS2) {
+                        if(r2 <= RADIUS2) {
                             W[CYCLIC_AT(p.ix + x_offset, p.iy + y_offset, p.iz + z_offset)] = 0.0 + 0.0*I;
                         }
                     }
@@ -152,6 +160,19 @@ void compute_spectrum(void) {
             }
         }
     }
+#ifdef DEBUG
+    printf("DEBUG: output of W\n");
+    printf("DEBUG: RADIUS2 = %i, RADIUS = %i\n", RADIUS2, RADIUS);
+    for(int thread_id = 0; thread_id < num_threads; thread_id++) {
+        printf("DEBUG: last_points_lengths[%i] = %i\n", thread_id, last_points_lengths[thread_id]);
+    }
+    fflush(stdout);
+    FILE* W_out = fopen(create_output_filepath("W.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        fprintf(W_out, "%.15e\n", creal(W[i]));
+    }
+    fclose(W_out);
+#endif
 
     // mask the strings out by multiplying point wise with W
     #pragma omp parallel for
@@ -214,27 +235,23 @@ void compute_spectrum(void) {
     for(int i = 0; i < NBINS; i++) {
         printf("DEBUG: #points of sphere[%i] = %i\n", i, sphere_list_lengths[i]);
     }
-#endif
-
-    printf("DEBUG: output of theta_dot * W ...");
+    printf("DEBUG: output of theta_dot * W\n");
     fflush(stdout);
     FILE* masked_theta_dot_out = fopen(create_output_filepath("masked_theta_dot_out.dat"), "w");
     for(int i = 0; i < N3; i++) {
         fprintf(masked_theta_dot_out, "%.15e\n", creal(theta_dot[i]));
     }
     fclose(masked_theta_dot_out);
-    printf(" done\n");
-
-    printf("DEBUG: output of FFT(theta_dot * W)^2 ...");
+    printf("DEBUG: output of FFT(theta_dot * W) \n");
     fflush(stdout);
     FILE* masked_theta_dot_fft_out = fopen(create_output_filepath("masked_theta_dot_fft_out.dat"), "w");
     for(int i = 0; i < N3; i++) {
         const double Re = creal(theta_dot_fft[i]);
         const double Im = cimag(theta_dot_fft[i]);
-        fprintf(masked_theta_dot_fft_out, "%.15e\n", Re*Re + Im*Im);
+        fprintf(masked_theta_dot_fft_out, "%.15e+%.15ej\n", Re, Im);
     }
     fclose(masked_theta_dot_fft_out);
-    printf(" done\n");
+#endif
 
 
     // spectrum of W*dot theta
@@ -262,7 +279,9 @@ void compute_spectrum(void) {
     for(int i = 0; i < NBINS; i++) {
         for(int j = i; j < NBINS; j++) {
 #ifdef DEBUG
-            printf("INFO: integrating M[%i, %i] of %ix%i\n", i, j, NBINS, NBINS);
+            if(j % (NBINS/4) == 0) {
+                printf("DEBUG: integrating M[%i, %i] of %ix%i\n", i, j, NBINS, NBINS);
+            }
 #endif
             gsl_matrix_set(M, i, j, i == j);
             gsl_matrix_set(M, j, i, i == j);

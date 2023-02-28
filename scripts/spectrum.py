@@ -183,7 +183,7 @@ P_ppse = bin_k**2 / L**3 / (2*np.pi**2) * bin_width * M_inv @ P_tilde
 #missing_prefactor = np.mean(P_tilde / P_ppse) # TODO: what is the correct prefactor
 #P_ppse *= missing_prefactor
 
-if __name__ == "__main__":
+def plot():
     # plot all spectra computed
     plt.figure(layout="constrained")
     plt.step(bin_start, P_full, where="pre", label="full spectrum including strings")
@@ -197,8 +197,16 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-c_field = np.loadtxt("run1_output/masked_theta_dot_out.dat").reshape(N,N,N)
-c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat").reshape(N,N,N)
-py_field = theta_dot_tilde # .transpose(2,1,0)
-py_fft = np.abs(fftn(py_field))**2
+py_field = theta_dot_tilde
+py_fft = fftn(py_field)
 
+theta_dot_c = np.loadtxt("run1_output/theta_dot.dat").reshape(N, N, N)
+W_c = np.loadtxt("run1_output/W.dat").reshape(N, N, N)
+c_field = np.loadtxt("run1_output/masked_theta_dot_out.dat").reshape(N,N,N)
+c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat", dtype="complex").reshape(N,N,N)
+
+assert np.isclose(theta_dot.transpose(2,1,0) / theta_dot_c, 1).all()
+assert np.all(W.transpose(2,1,0) == W_c)
+# field = W * theta_dot
+assert np.isclose(py_field.transpose(2,1,0) - c_field, 0).all()
+assert np.isclose(py_fft.transpose(2,1,0) / c_fft, 0.5-0.5j).all()
