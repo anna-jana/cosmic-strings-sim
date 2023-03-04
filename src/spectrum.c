@@ -179,13 +179,22 @@ void compute_spectrum(void) {
     for(int i = 0; i < N3; i++) {
         theta_dot[i] *= W[i];
     }
+#ifdef DEBUG
+    printf("DEBUG: output of theta_dot * W\n");
+    fflush(stdout);
+    FILE* masked_theta_dot_out = fopen(create_output_filepath("masked_theta_dot_out.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        fprintf(masked_theta_dot_out, "%.15e\n", creal(theta_dot[i]));
+    }
+    fclose(masked_theta_dot_out);
+#endif
+
 
     // calc histogram quantaties and integration measures
     const double dx_physical = dx * a;
     const double kmax = calc_k_max_grid(N, dx_physical);
-    const double Delta_k = 2*PI/dx_physical;
+    const double Delta_k = 2*PI / (N * dx_physical);
     const double bin_width = kmax / NBINS;
-
 #ifdef DEBUG
     printf("DEBUG: current_conformal_time = %lf\n", current_conformal_time);
     printf("DEBUG: dx = %lf, a = %lf, NBINS = %i\n", dx, a, NBINS);
@@ -198,10 +207,25 @@ void compute_spectrum(void) {
         const double vol = 4.0/3.0 * PI * (pow((i + 1)*bin_width, 3) - pow(i*bin_width, 3));
         const double area = 4*PI * pow(i*bin_width + bin_width/2, 2);
         surface_integral_element[i] = area / vol * pow(Delta_k, 3);
+#ifdef DEBUG
+        printf("DEBUG: surface_element[%i] = %.15e, vol = %.14e, area = %.15e\n",
+                i, surface_integral_element[i], vol, area);
+#endif
     }
 
     // fft of W*dot theta
     fftw_execute(theta_dot_fft_plan);
+#ifdef DEBUG
+    printf("DEBUG: output of FFT(theta_dot * W) \n");
+    fflush(stdout);
+    FILE* masked_theta_dot_fft_out = fopen(create_output_filepath("masked_theta_dot_fft_out.dat"), "w");
+    for(int i = 0; i < N3; i++) {
+        const double Re = creal(theta_dot_fft[i]);
+        const double Im = cimag(theta_dot_fft[i]);
+        fprintf(masked_theta_dot_fft_out, "%.15e+%.15ej\n", Re, Im);
+    }
+    fclose(masked_theta_dot_fft_out);
+#endif
 
     // compute surface integration spheres
     // TODO: these should be global
@@ -235,24 +259,7 @@ void compute_spectrum(void) {
     for(int i = 0; i < NBINS; i++) {
         printf("DEBUG: #points of sphere[%i] = %i\n", i, sphere_list_lengths[i]);
     }
-    printf("DEBUG: output of theta_dot * W\n");
-    fflush(stdout);
-    FILE* masked_theta_dot_out = fopen(create_output_filepath("masked_theta_dot_out.dat"), "w");
-    for(int i = 0; i < N3; i++) {
-        fprintf(masked_theta_dot_out, "%.15e\n", creal(theta_dot[i]));
-    }
-    fclose(masked_theta_dot_out);
-    printf("DEBUG: output of FFT(theta_dot * W) \n");
-    fflush(stdout);
-    FILE* masked_theta_dot_fft_out = fopen(create_output_filepath("masked_theta_dot_fft_out.dat"), "w");
-    for(int i = 0; i < N3; i++) {
-        const double Re = creal(theta_dot_fft[i]);
-        const double Im = cimag(theta_dot_fft[i]);
-        fprintf(masked_theta_dot_fft_out, "%.15e+%.15ej\n", Re, Im);
-    }
-    fclose(masked_theta_dot_fft_out);
 #endif
-
 
     // spectrum of W*dot theta
     // P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2

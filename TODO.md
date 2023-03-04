@@ -43,3 +43,4 @@
     * the c ode was using points_lengths from string_detection but while connecting points into strings, they were set to 0
     * trying to fix that: we have adress errors now -> fixed (bug in string detection)
     * ffts of theta_dot * W are different -> fixed (I had W = 1+1j instead of W = 1 for point away from strings)
+    * Delta_k different in py and c -> fixed Delta_k in c code, forgot to divide by N
