@@ -141,7 +141,7 @@ void compute_spectrum(void) {
     // compute W
     #pragma omp parallel for
     for(int i = 0; i < N3; i++) {
-        W[i] = 1 + 1*I;
+        W[i] = 1.0 + 0.0*I;
     }
     #pragma omp parallel for
     for(int thread_id = 0; thread_id < num_threads; thread_id++) {

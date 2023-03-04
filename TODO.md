@@ -29,6 +29,7 @@
 [x] document energy
 [ ] document propagation algorithm
 [ ] video of strings
+[ ] fft -> real fft
 [~] I think the detected strings in c and python are not the same
 [x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)
 [x] parallel string point collection
@@ -36,9 +37,9 @@
     * [x] bins of the spectrum are diferent -> fixed
     * [x] shape is the same
     * [ ] scale is different
-    * ffts of theta_dot * W are different
     * pyfftw yields the same result as scipy in the python code
     * theta_dot * W are almost the same except for some where the python code is = 0 but the c code is not
     * W in the c code is alsways = 1
     * the c ode was using points_lengths from string_detection but while connecting points into strings, they were set to 0
     * trying to fix that: we have adress errors now -> fixed (bug in string detection)
+    * ffts of theta_dot * W are different -> fixed (I had W = 1+1j instead of W = 1 for point away from strings)

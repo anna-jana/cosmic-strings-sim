@@ -5,15 +5,6 @@ from scipy.fft import fftn, fftfreq
 from numba import jit
 import cosmology, string_detection, load_data
 
-# replaces scipy.fft.fftn for testing purposes
-#import pyfftw
-#def fftn(xs):
-#    xs = xs.astype("complex")
-#    out = np.empty_like(xs)
-#    plan = pyfftw.FFTW(xs, out, axes=(0,1,2), direction="FFTW_FORWARD")
-#    plan.execute()
-#    return out
-
 # get \dot{\theta} from \phi and \dot{\phi}
 def compute_theta_dot(phi, phi_dot, a):
     d_theta_d_tau = (
@@ -209,4 +200,4 @@ assert np.isclose(theta_dot.transpose(2,1,0) / theta_dot_c, 1).all()
 assert np.all(W.transpose(2,1,0) == W_c)
 # field = W * theta_dot
 assert np.isclose(py_field.transpose(2,1,0) - c_field, 0).all()
-assert np.isclose(py_fft.transpose(2,1,0) / c_fft, 0.5-0.5j).all()
+assert np.isclose(py_fft.transpose(2,1,0) / c_fft, 1.0).all()
