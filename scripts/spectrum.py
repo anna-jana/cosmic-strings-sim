@@ -46,6 +46,15 @@ def find_sphere(k_1d, k_abs_3d, min_k, max_k):
                     out.append((i1, i2, i3))
     return np.array(out)
 
+def compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d):
+    # compute all the spheres
+    spheres = []
+    for i in range(nbins):
+        min_k = i * bin_width
+        max_k = min_k + bin_width
+        spheres.append(find_sphere(k_1d, k_abs_3d, min_k, max_k))
+    return spheres
+
 # P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
 def compute_spectrum(field, L, spheres, bin_k, surface_element):
     integrant = np.abs(fftn(field))**2 # TODO: is k**2 right here or bin_?????
@@ -53,7 +62,7 @@ def compute_spectrum(field, L, spheres, bin_k, surface_element):
             np.sum(integrant[spheres[i].T[0], spheres[i].T[1], spheres[i].T[2]])
             for i in range(len(bin_k))])
     spectrum *= bin_k**2 / L**3 / (4*np.pi) * 0.5 * surface_element
-    return np.array(spectrum)
+    return spectrum
 
 @jit
 def substract_wave_numbers(f, idx1, idx2, N):
@@ -80,15 +89,6 @@ def sum_spheres(sphere1, sphere2, N, f, integrant):
             ]
             out += c.real**2 + c.imag**2
     return out
-
-def compute_spheres(N, nbins, bin_width, k_1d, k_abs_3d):
-    # compute all the spheres
-    spheres = []
-    for i in range(nbins):
-        min_k = i * bin_width
-        max_k = min_k + bin_width
-        spheres.append(find_sphere(k_1d, k_abs_3d, min_k, max_k))
-    return spheres
 
 # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
 def compute_M(N, nbins, W_fft, surface_element, L):

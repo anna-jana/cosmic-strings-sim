@@ -36,7 +36,7 @@
 [ ] fix difference between python and c spectrum code
     * [x] bins of the spectrum are diferent -> fixed
     * [x] shape is the same
-    * [ ] scale is different
+    * [x] scale is different
     * pyfftw yields the same result as scipy in the python code
     * theta_dot * W are almost the same except for some where the python code is = 0 but the c code is not
     * W in the c code is alsways = 1
@@ -44,3 +44,6 @@
     * trying to fix that: we have adress errors now -> fixed (bug in string detection)
     * ffts of theta_dot * W are different -> fixed (I had W = 1+1j instead of W = 1 for point away from strings)
     * Delta_k different in py and c -> fixed Delta_k in c code, forgot to divide by N
+    * fixed assining complex to double variable and then taking real/imag components in c uncorrected spectrum code
+    * ----> uncorrected spectrum is the same
+    * still need to check M and corrected spectrum computation

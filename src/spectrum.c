@@ -24,7 +24,7 @@ static struct Index** spheres;
 static int* sphere_list_capacities;
 static int* sphere_list_lengths;
 
-static double* surface_integral_element;
+static double* surface_element;
 static double* spectrum_uncorrected;
 static double* spectrum_corrected;
 
@@ -51,7 +51,7 @@ void init_compute_spectrum(void) {
         spheres[i] = malloc(sizeof(struct Index) * sphere_list_capacities[i]);
     }
 
-    surface_integral_element = malloc(sizeof(double) * NBINS);
+    surface_element = malloc(sizeof(double) * NBINS);
     spectrum_uncorrected = malloc(sizeof(double) * NBINS);
     spectrum_corrected = malloc(sizeof(double) * NBINS);
 
@@ -84,7 +84,7 @@ void deinit_compute_spectrum(void) {
 
     free(spectrum_uncorrected);
     free(spectrum_corrected);
-    free(surface_integral_element);
+    free(surface_element);
 
     gsl_matrix_free(M);
     gsl_matrix_free(M_inv);
@@ -206,10 +206,10 @@ void compute_spectrum(void) {
     for(int i = 0; i < NBINS; i++) {
         const double vol = 4.0/3.0 * PI * (pow((i + 1)*bin_width, 3) - pow(i*bin_width, 3));
         const double area = 4*PI * pow(i*bin_width + bin_width/2, 2);
-        surface_integral_element[i] = area / vol * pow(Delta_k, 3);
+        surface_element[i] = area / vol * pow(Delta_k, 3);
 #ifdef DEBUG
         printf("DEBUG: surface_element[%i] = %.15e, vol = %.14e, area = %.15e\n",
-                i, surface_integral_element[i], vol, area);
+                i, surface_element[i], vol, area);
 #endif
     }
 
@@ -268,11 +268,11 @@ void compute_spectrum(void) {
         spectrum_uncorrected[i] = 0.0;
         const double bin_k = i * bin_width + bin_width/2.0;
         for(int j = 0; j < sphere_list_lengths[i]; j++) {
-            struct Index index = spheres[i][j];
-            const double integrant = theta_dot_fft[AT(index.ix, index.iy, index.iz)];
-            spectrum_uncorrected[i] += creal(integrant)*creal(integrant) + cimag(integrant)*cimag(integrant);
+            const struct Index index = spheres[i][j];
+            const complex double A = theta_dot_fft[AT(index.ix, index.iy, index.iz)];
+            spectrum_uncorrected[i] += creal(A)*creal(A) + cimag(A)*cimag(A);
         }
-        spectrum_uncorrected[i] *= surface_integral_element[i];
+        spectrum_uncorrected[i] *= surface_element[i];
         spectrum_uncorrected[i] *= bin_k*bin_k / (L*L*L) / (4 * PI) * 0.5;
     }
 
@@ -309,7 +309,7 @@ void compute_spectrum(void) {
                     s += Re*Re + Im*Im;
                 }
             }
-            s *= surface_integral_element[i] * surface_integral_element[j] / f;
+            s *= surface_element[i] * surface_element[j] / f;
             gsl_matrix_set(M, i, j, s);
             gsl_matrix_set(M, j, i, s);
         }
