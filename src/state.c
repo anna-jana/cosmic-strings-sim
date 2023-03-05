@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <complex.h>
+#include <fftw3.h>
 #include <omp.h>
 
 // parameters
@@ -28,8 +30,8 @@ int num_threads;
 // simulation state (global for now, maybe put into struct later)
 double current_conformal_time;
 int step;
-fftw_complex *phi, *phi_dot, *phi_dot_dot;
-fftw_complex *next_phi, *next_phi_dot, *next_phi_dot_dot;
+complex double *phi, *phi_dot, *phi_dot_dot;
+complex double *next_phi, *next_phi_dot, *next_phi_dot_dot;
 
 // initial state generation
 #define FIELD_MAX (1 / sqrt(2))

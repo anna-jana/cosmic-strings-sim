@@ -10,9 +10,7 @@
 [ ] distributed memory paralism
 [x] compute energy components
 [x] make some constants parameters (defines -> global variables) =====> makes the code slower
-[ ] compute spectrum (python)
-[ ] prefactors between kawasaki and gorghetto differ
-[ ] compute instantaeous spectrum (python)
+[~] compute spectrum (python)
 [ ] compute spectrum and instantaeous spectrum (c)
 [ ] compute gamme factor for strings
 [x] exchange parameters between python and c (either call c code from python or parameter file)
@@ -30,10 +28,11 @@
 [ ] document propagation algorithm
 [ ] video of strings
 [ ] fft -> real fft
+[x] change mallocs of arrays of which we take the fft to fftw_malloc such that fftw can use simd
 [~] I think the detected strings in c and python are not the same
 [x] i think we cant go to k_max in the spectrum computation because then we dont integrate a hole sphere (the corners in the grid are cutting the sphere)
 [x] parallel string point collection
-[ ] fix difference between python and c spectrum code
+[~] fix difference between python and c spectrum code
     * [x] bins of the spectrum are diferent -> fixed
     * [x] shape is the same
     * [x] scale is different

@@ -36,10 +36,10 @@ static gsl_permutation* p;
 static FILE* out;
 
 void init_compute_spectrum(void) {
-    W = malloc(sizeof(complex double) * N3);
-    W_fft = malloc(sizeof(complex double) * N3);
-    theta_dot = malloc(sizeof(complex double) * N3);
-    theta_dot_fft = malloc(sizeof(complex double) * N3);
+    W = fftw_malloc(sizeof(complex double) * N3);
+    W_fft = fftw_malloc(sizeof(complex double) * N3);
+    theta_dot = fftw_malloc(sizeof(complex double) * N3);
+    theta_dot_fft = fftw_malloc(sizeof(complex double) * N3);
 
     physical_ks = malloc(sizeof(double) * N);
 
@@ -68,10 +68,10 @@ void init_compute_spectrum(void) {
 }
 
 void deinit_compute_spectrum(void) {
-    free(W);
-    free(W_fft);
-    free(theta_dot);
-    free(theta_dot_fft);
+    fftw_free(W);
+    fftw_free(W_fft);
+    fftw_free(theta_dot);
+    fftw_free(theta_dot_fft);
 
     free(physical_ks);
 
