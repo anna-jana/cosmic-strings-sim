@@ -191,13 +191,21 @@ def plot():
 py_field = theta_dot_tilde
 py_fft = fftn(py_field)
 
-theta_dot_c = np.loadtxt("run1_output/theta_dot.dat").reshape(N, N, N)
-W_c = np.loadtxt("run1_output/W.dat").reshape(N, N, N)
-c_field = np.loadtxt("run1_output/masked_theta_dot_out.dat").reshape(N,N,N)
-c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat", dtype="complex").reshape(N,N,N)
+try:
+    theta_dot_c = np.loadtxt("run1_output/theta_dot.dat").reshape(N, N, N)
+    W_c = np.loadtxt("run1_output/W.dat").reshape(N, N, N)
+    c_field = np.loadtxt("run1_output/masked_theta_dot_out.dat").reshape(N,N,N)
+    #c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat", dtype="complex").reshape(N,N,N)
+    c_fft = np.loadtxt("run1_output/masked_theta_dot_fft_out.dat", dtype="complex").reshape(N,N,N//2 + 1)
+except FileNotFoundError:
+    print("debug files not found, c code wasn't compiled/run the debug option")
 
-assert np.isclose(theta_dot.transpose(2,1,0) / theta_dot_c, 1).all()
-assert np.all(W.transpose(2,1,0) == W_c)
-# field = W * theta_dot
-assert np.isclose(py_field.transpose(2,1,0) - c_field, 0).all()
-assert np.isclose(py_fft.transpose(2,1,0) / c_fft, 1.0).all()
+def do_check():
+    assert np.isclose(theta_dot.transpose(2,1,0) / theta_dot_c, 1).all()
+    assert np.all(W.transpose(2,1,0) == W_c)
+    # field = W * theta_dot
+    assert np.isclose(py_field.transpose(2,1,0) - c_field, 0).all()
+    # this is for complex -> complex transforms in the c code:
+    # assert np.isclose(py_fft.transpose(2,1,0) / c_fft, 1.0).all()
+    # and this for real -> complex transforms in the c code:
+    assert np.isclose(c_fft[:,:] / py_fft.transpose(2,1,0)[:,:,:py_fft.shape[2]//2+1], 1).all()

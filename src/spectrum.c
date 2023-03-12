@@ -1,5 +1,6 @@
 #include "globals.h"
 
+#include <math.h>
 #include <complex.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -13,9 +14,9 @@
 #define RADIUS 2 // TODO: tune this parameter
 #define RADIUS2 (RADIUS*RADIUS)
 
-static complex double* W;
+static double* W;
 static complex double* W_fft;
-static complex double* theta_dot;
+static double* theta_dot;
 static complex double* theta_dot_fft;
 
 static double* physical_ks;
@@ -28,18 +29,21 @@ static double* surface_element;
 static double* spectrum_uncorrected;
 static double* spectrum_corrected;
 
-static fftw_plan theta_dot_fft_plan; static fftw_plan W_fft_plan;
+static fftw_plan theta_dot_fft_plan;
+static fftw_plan W_fft_plan;
 static gsl_matrix* M;
 static gsl_matrix* M_inv;
 static gsl_permutation* p;
 
 static FILE* out;
 
+#define REAL_TO_COMPLEX_FFT_OUTPUT_SIZE (N*N*(N/2 + 1))
+
 void init_compute_spectrum(void) {
-    W = fftw_malloc(sizeof(complex double) * N3);
-    W_fft = fftw_malloc(sizeof(complex double) * N3);
-    theta_dot = fftw_malloc(sizeof(complex double) * N3);
-    theta_dot_fft = fftw_malloc(sizeof(complex double) * N3);
+    W = fftw_malloc(sizeof(double) * N3);
+    W_fft = fftw_malloc(sizeof(complex double) * REAL_TO_COMPLEX_FFT_OUTPUT_SIZE);
+    theta_dot = fftw_malloc(sizeof(double) * N3);
+    theta_dot_fft = fftw_malloc(sizeof(complex double) * REAL_TO_COMPLEX_FFT_OUTPUT_SIZE);
 
     physical_ks = malloc(sizeof(double) * N);
 
@@ -59,8 +63,8 @@ void init_compute_spectrum(void) {
     M_inv = gsl_matrix_alloc(NBINS, NBINS);
     p = gsl_permutation_alloc(NBINS);
 
-    theta_dot_fft_plan = fftw_plan_dft_3d(N, N, N, theta_dot, theta_dot_fft, FFTW_FORWARD, FFTW_ESTIMATE);
-    W_fft_plan = fftw_plan_dft_3d(N, N, N, W, W_fft, FFTW_FORWARD, FFTW_ESTIMATE);
+    theta_dot_fft_plan = fftw_plan_dft_r2c_3d(N, N, N, theta_dot, theta_dot_fft, FFTW_ESTIMATE);
+    W_fft_plan = fftw_plan_dft_r2c_3d(N, N, N, W, W_fft, FFTW_ESTIMATE);
 
     const char* fname = create_output_filepath("spectrum.dat");
     printf("INFO: writing spectrum to %s\n", fname);
@@ -133,7 +137,7 @@ void compute_spectrum(void) {
     printf("DEBUG: output of theta_dot\n");
     FILE* theta_dot_out = fopen(create_output_filepath("theta_dot.dat"), "w");
     for(int i = 0; i < N3; i++) {
-        fprintf(theta_dot_out, "%.15e\n", creal(theta_dot[i]));
+        fprintf(theta_dot_out, "%.15e\n", theta_dot[i]);
     }
     fclose(theta_dot_out);
 #endif
@@ -141,7 +145,7 @@ void compute_spectrum(void) {
     // compute W
     #pragma omp parallel for
     for(int i = 0; i < N3; i++) {
-        W[i] = 1.0 + 0.0*I;
+        W[i] = 1.0;
     }
     #pragma omp parallel for
     for(int thread_id = 0; thread_id < num_threads; thread_id++) {
@@ -153,7 +157,7 @@ void compute_spectrum(void) {
                         const double r2 = x_offset*x_offset + y_offset*y_offset + z_offset*z_offset;
                         const struct Index p = points[thread_id][i];
                         if(r2 <= RADIUS2) {
-                            W[CYCLIC_AT(p.ix + x_offset, p.iy + y_offset, p.iz + z_offset)] = 0.0 + 0.0*I;
+                            W[CYCLIC_AT(p.ix + x_offset, p.iy + y_offset, p.iz + z_offset)] = 0.0;
                         }
                     }
                 }
@@ -166,10 +170,9 @@ void compute_spectrum(void) {
     for(int thread_id = 0; thread_id < num_threads; thread_id++) {
         printf("DEBUG: last_points_lengths[%i] = %i\n", thread_id, last_points_lengths[thread_id]);
     }
-    fflush(stdout);
     FILE* W_out = fopen(create_output_filepath("W.dat"), "w");
     for(int i = 0; i < N3; i++) {
-        fprintf(W_out, "%.15e\n", creal(W[i]));
+        fprintf(W_out, "%.15e\n", W[i]);
     }
     fclose(W_out);
 #endif
@@ -181,14 +184,12 @@ void compute_spectrum(void) {
     }
 #ifdef DEBUG
     printf("DEBUG: output of theta_dot * W\n");
-    fflush(stdout);
     FILE* masked_theta_dot_out = fopen(create_output_filepath("masked_theta_dot_out.dat"), "w");
     for(int i = 0; i < N3; i++) {
-        fprintf(masked_theta_dot_out, "%.15e\n", creal(theta_dot[i]));
+        fprintf(masked_theta_dot_out, "%.15e\n", theta_dot[i]);
     }
     fclose(masked_theta_dot_out);
 #endif
-
 
     // calc histogram quantaties and integration measures
     const double dx_physical = dx * a;
@@ -217,9 +218,9 @@ void compute_spectrum(void) {
     fftw_execute(theta_dot_fft_plan);
 #ifdef DEBUG
     printf("DEBUG: output of FFT(theta_dot * W) \n");
-    fflush(stdout);
     FILE* masked_theta_dot_fft_out = fopen(create_output_filepath("masked_theta_dot_fft_out.dat"), "w");
-    for(int i = 0; i < N3; i++) {
+    // for(int i = 0; i < N3; i++) {
+    for(int i = 0; i < REAL_TO_COMPLEX_FFT_OUTPUT_SIZE; i++) {
         const double Re = creal(theta_dot_fft[i]);
         const double Im = cimag(theta_dot_fft[i]);
         fprintf(masked_theta_dot_fft_out, "%.15e+%.15ej\n", Re, Im);
@@ -228,7 +229,6 @@ void compute_spectrum(void) {
 #endif
 
     // compute surface integration spheres
-    // TODO: these should be global
     fill_fft_freq(N, dx_physical, physical_ks);
     #pragma omp parallel for
     for(int i = 0; i < NBINS; i++) {
@@ -237,7 +237,7 @@ void compute_spectrum(void) {
         const double bin_k_max = bin_k_min + bin_width;
         for(int iz = 0; iz < N; iz++) {
             for(int iy = 0; iy < N; iy++) {
-                for(int ix = 0; ix < N; ix++) {
+                for(int ix = 0; ix < N / 2 + 1; ix++) {
                     const double kx = physical_ks[ix];
                     const double ky = physical_ks[iy];
                     const double kz = physical_ks[iz];
@@ -274,6 +274,7 @@ void compute_spectrum(void) {
         }
         spectrum_uncorrected[i] *= surface_element[i];
         spectrum_uncorrected[i] *= bin_k*bin_k / (L*L*L) / (4 * PI) * 0.5;
+        spectrum_uncorrected[i] *= 2; // because we use the real -> complex transform
     }
 
     // W fft
@@ -310,6 +311,7 @@ void compute_spectrum(void) {
                 }
             }
             s *= surface_element[i] * surface_element[j] / f;
+            s *= 2; // because we use the real -> complex transform
             gsl_matrix_set(M, i, j, s);
             gsl_matrix_set(M, j, i, s);
         }

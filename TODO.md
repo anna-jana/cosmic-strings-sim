@@ -14,7 +14,7 @@
 [ ] compute spectrum and instantaeous spectrum (c)
 [ ] compute gamme factor for strings
 [x] exchange parameters between python and c (either call c code from python or parameter file)
-[ ] study creation of initial conditions
+[ ] creation of initial conditions using different methods
 [ ] higher order time propagation algorithm
 [ ] higher order stecil for laplacian
 [ ] GPU code?
