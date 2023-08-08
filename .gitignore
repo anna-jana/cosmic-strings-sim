@@ -18,3 +18,4 @@ __pycache__
 *.xml
 *blx.bib
 *.npy
+Manifest.toml
