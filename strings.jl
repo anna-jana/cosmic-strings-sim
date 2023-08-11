@@ -27,6 +27,14 @@ Base.@kwdef struct Parameter
 
     nbins :: Int
     radius :: Int
+
+    # optaning analysis data from simulation
+    compute_energy_interval_tau :: Float64
+    compute_strings_interval_tau :: Float64
+    compute_spectrum_interval_tau :: Float64
+    compute_energy_interval :: Int
+    compute_strings_interval :: Int
+    compute_spectrum_interval :: Int
 end
 
 Base.@kwdef mutable struct State
@@ -60,9 +68,9 @@ end
 function random_field(p :: Parameter)
     hat = new_field_array(p)
     ks = fftfreq(p.N, 1 / p.dx) .* (2*pi)
-    for ix in 1:p.N
-        for iy in 1:p.N
-            for iz in 1:p.N
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds @simd for ix in 1:p.N
                 kx = ks[ix]
                 ky = ks[iy]
                 kz = ks[iz]
@@ -74,12 +82,18 @@ function random_field(p :: Parameter)
     return ifft(hat)
 end
 
-function init()
-    log_start = 2.0
-    log_end = 3.0
-    Delta_tau = -1e-2
-    seed = 42
-
+function init(;
+        log_start = 2.0,
+        log_end = 3.0,
+        Delta_tau = -1e-2,
+        seed = 42,
+        k_max = 1.0,
+        nbins = 20,
+        radius = 1,
+        compute_energy_interval_tau = 0.1,
+        compute_strings_interval_tau = 0.1,
+        compute_spectrum_interval_tau = 1.0,
+    )
     Random.seed!(seed)
 
     L = 1 / log_to_H(log_end)
@@ -95,14 +109,20 @@ function init()
         N=N,
         Delta_tau=Delta_tau,
         seed=seed,
-        k_max=1.0,
+        k_max=k_max,
         dx=L / N, # L/N not L/(N-1) bc we have cyclic boundary conditions*...*...* N = 2
         tau_start=tau_start,
         tau_end=tau_end,
         tau_span=tau_span,
         nsteps=ceil(Int, tau_span / Delta_tau),
-        nbins=20,
-        radius=1,
+        nbins=nbins,
+        radius=radius,
+        compute_energy_interval_tau=compute_energy_interval_tau,
+        compute_strings_interval_tau=compute_strings_interval_tau,
+        compute_spectrum_interval_tau=compute_spectrum_interval_tau,
+        compute_energy_interval=floor(Int, Delta_tau / compute_energy_interval_tau),
+        compute_strings_interval=floor(Int, Delta_tau / compute_strings_interval_tau),
+        compute_spectrum_interval=floor(Int, Delta_tau / compute_spectrum_interval_tau),
    )
 
    s = State(
@@ -123,9 +143,9 @@ end
 
 function compute_force!(out :: Array{Complex{Float64}, 3}, s :: State, p :: Parameter)
     scale_factor = tau_to_a(s.tau)
-    for ix in 1:p.N
-        for iy in 1:p.N
-            for iz in 1:p.N
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds @simd for ix in 1:p.N
                 pot_force = s.phi[ix, iy, iz] * (abs2(s.phi[ix, iy, iz]) - 0.5*scale_factor)
                 laplace = (- 6 * s.phi[ix, iy, iz] +
                     s.phi[mod1(ix + 1, p.N), iy, iz] +
@@ -140,7 +160,7 @@ function compute_force!(out :: Array{Complex{Float64}, 3}, s :: State, p :: Para
     end
 end
 
-function step!(s :: State, p :: Parameter)
+function make_step!(s :: State, p :: Parameter)
     # propagate PDE using velocity verlet algorithm
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
 
@@ -169,9 +189,9 @@ function compute_energy(s :: State, p :: Parameter)
     mean_radial_potential = 0.0
     mean_interaction = 0.0
 
-    for ix in 1:p.N
-        for iy in 1:p.N
-            for iz in 1:p.N
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds @simd for ix in 1:p.N
                 R = real(s.phi[ix, iy, iz])
                 I = imag(s.phi[ix, iy, iz])
                 R_dot = real(s.phi_dot[ix, iy, iz])
@@ -229,16 +249,17 @@ function compute_energy(s :: State, p :: Parameter)
             mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_radial_total,
             mean_interaction, mean_total)
 end
+
 # (string contention method from Moore at al.)
-function crosses_real_axis(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Bool
+@inline function crosses_real_axis(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Bool
     return imag(phi1) * imag(phi2) < 0
 end
 
-function handedness(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Int
+@inline function handedness(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Int
     return sign(imag(phi1 * conj(phi2)))
 end
 
-function loop_contains_string(phi1 :: Complex{Float64}, phi2 :: Complex{Float64},
+@inline function loop_contains_string(phi1 :: Complex{Float64}, phi2 :: Complex{Float64},
                               phi3 :: Complex{Float64}, phi4 :: Complex{Float64})
     loop = (
           crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
@@ -249,11 +270,11 @@ function loop_contains_string(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}
     return abs(loop) == 2
 end
 
-function cyclic_dist_squared_1d(p :: Parameter, x1 :: Float64, x2 :: Float64) :: Float64
+@inline function cyclic_dist_squared_1d(p :: Parameter, x1 :: Float64, x2 :: Float64) :: Float64
     return min((x1 - x2)^2, (p.N - x1 + x2)^2, (p.N - x2 + x1)^2)
 end
 
-function cyclic_dist_squared(p :: Parameter, p1 :: SVector{3, Float64}, p2 :: SVector{3, Float64}) :: Float64
+@inline function cyclic_dist_squared(p :: Parameter, p1 :: SVector{3, Float64}, p2 :: SVector{3, Float64}) :: Float64
     x1, y1, z1 = p1
     x2, y2, z2 = p2
     return (
@@ -267,9 +288,9 @@ end
 
 function detect_strings(s :: State, p :: Parameter)
     string_points = Set{SVector{3, Float64}}()
-    for ix in 1:p.N
-        for iy in 1:p.N
-            for iz in 1:p.N
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds for ix in 1:p.N
                 if loop_contains_string(s.phi[ix, iy, iz], s.phi[mod1(ix + 1, p.N), iy, iz],
                                         s.phi[mod1(ix + 1, p.N), mod1(iy + 1, p.N), iz], s.phi[ix, mod1(iy + 1, p.N), iz])
                     push!(string_points, SVector(ix - 1 + 0.5, iy - 1 + 0.5, iz))
@@ -360,7 +381,7 @@ function plot_strings(params :: Parameter, strings :: Vector{Vector{SVector{3, F
     return nothing
 end
 
-function compute_theta_dot(a :: Float64, phi :: Complex{Float64}, phi_dot :: Complex{Float64})
+@inline function compute_theta_dot(a :: Float64, phi :: Complex{Float64}, phi_dot :: Complex{Float64})
     R = real(phi)
     I = imag(phi)
     R_dot = real(phi_dot)
@@ -369,7 +390,7 @@ function compute_theta_dot(a :: Float64, phi :: Complex{Float64}, phi_dot :: Com
     return d_theta_d_tau / a
 end
 
-function calc_k_max_grid(n, d)
+@inline function calc_k_max_grid(n, d)
     if n % 2 == 0
         return 2 * pi * (n / 2) / (d*n)
     else
@@ -377,11 +398,11 @@ function calc_k_max_grid(n, d)
     end
 end
 
-function idx_to_k(p, idx)
+@inline function idx_to_k(p, idx)
     return idx < div(p.N, 2) ? idx : -div(p.N, 2) + idx  - div(p.N, 2)
 end
 
-function substract_wave_numbers(p, i, j)
+@inline function substract_wave_numbers(p, i, j)
     k = idx_to_k(p, i)
     k_prime = idx_to_k(p, j)
     k_diff = mod(k - k_prime + div(p.N, 2), p.N) - div(p.N, 2)
@@ -400,9 +421,9 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     W = fill(1.0 + 0.0im, (p.N, p.N, p.N))
     for string in strings
         for point in string
-            for x_offset in -p.radius:p.radius
-                for y_offset in -p.radius:p.radius
-                    for z_offset in -p.radius:p.radius
+            @inbounds for x_offset in -p.radius:p.radius
+                @inbounds for y_offset in -p.radius:p.radius
+                    @inbounds @simd for z_offset in -p.radius:p.radius
                         r2 = x_offset^2 + y_offset^2 + z_offset^2
                         if r2 <= p.radius^2
                             ix = mod1(floor(Int, point[1] + 1.0), p.N)
@@ -441,9 +462,9 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     for i in 1:p.nbins
         bin_k_min = i * bin_width
         bin_k_max = bin_k_min + bin_width
-        for ix in 1:p.N
-            for iy in 1:p.N
-                for iz in 1:p.N
+        @inbounds for iz in 1:p.N
+            @inbounds for iy in 1:p.N
+                @inbounds for ix in 1:p.N
                     k2 = physical_ks[ix]^2 + physical_ks[iy]^2 + physical_ks[iz]^2
                     if k2 >= bin_k_min^2 && k2 <= bin_k_max^2
                         push!(spheres[i], (ix, iy, iz))
@@ -475,15 +496,16 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
         for j in 1:p.nbins
             @show i, j
             # integrate spheres
-            s = 0.0
-            for idx1 in spheres[i]
+            s_atomic = Threads.Atomic{Float64}(0.0)
+            Threads.@threads for idx1 in spheres[i]
                 for idx2 in spheres[j]
                     ix = substract_wave_numbers(p, idx1[1] - 1, idx2[1] - 1)
                     iy = substract_wave_numbers(p, idx1[2] - 1, idx2[2] - 1)
                     iz = substract_wave_numbers(p, idx1[3] - 1, idx2[3] - 1)
-                    s += abs2(W_fft[ix + 1, iy + 1, iz + 1])
+                    Threads.atomic_add!(s_atomic, abs2(@inbounds W_fft[ix + 1, iy + 1, iz + 1]))
                 end
             end
+            s = s_atomic[]
             s *= surface_element[i] * surface_element[j] / f
             M[i, j] = M[j, i] = s
         end
@@ -509,4 +531,29 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     return physical_ks, spectrum_corrected
 end
 
+
+function run_simulation!(s :: State, p :: Parameter)
+    energies = []
+    strings = []
+    spectra = []
+    for i in p.nsteps
+        make_step!(s, p)
+        if i % p.compute_energy_interval == 0
+            push!(energies, (s.tau, compute_energy(s, p)))
+        end
+        if i % p.compute_strings_interval == 0 || i % p.compute_spectrum_interval == 0
+            strings = detect_strings(s, p)
+        end
+        if i % p.compute_strings_interval == 0
+            push!(strings, (tau, map(length, strings)))
+        end
+        if i % p.compute_spectrum_interval == 0
+            push!(spectra, compute_spectrum(s, p, strings))
+        end
+    end
+    return energies, strings, spectra
 end
+
+end
+
+sim, params = CosmicStrings.init()
