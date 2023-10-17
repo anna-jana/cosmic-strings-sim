@@ -35,7 +35,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     theta_dot = compute_theta_dot.(a, s.phi, s.phi_dot)
 
     # compute W (string mask)
-    W = fill(1.0 + 0.0im, (p.N, p.N, p.N))
+    W = ones(p.N, p.N, p.N)
     for string in strings
         for point in string
             @inbounds for x_offset in -p.radius:p.radius
@@ -74,7 +74,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
 
     # TODO: use preplaned ffts
     # TODO: use rfft
-    theta_dot_fft = fft(theta_dot)
+    theta_dot_fft = rfft(theta_dot)
 
     spheres = [Tuple{Int, Int, Int}[] for i in 1:p.nbins]
     for i in 1:p.nbins
@@ -82,7 +82,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
         bin_k_max = bin_k_min + bin_width
         @inbounds for iz in 1:p.N
             @inbounds for iy in 1:p.N
-                @inbounds for ix in 1:p.N
+                @inbounds for ix in 1:div(p.N, 2) + 1
                     k2 = physical_ks[ix]^2 + physical_ks[iy]^2 + physical_ks[iz]^2
                     if k2 >= bin_k_min^2 && k2 <= bin_k_max^2
                         push!(spheres[i], (ix, iy, iz))
@@ -104,7 +104,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
         spectrum_uncorrected[i] *= bin_ks[i]^2 / p.L^3 / (4 * pi) * 0.5
     end
 
-    W_fft = fft(W)
+    W_fft = rfft(W)
 
     # compute M
     # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
@@ -113,7 +113,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     f = p.L^6 * (4 * pi)^2
     for i in 1:p.nbins
         for j in 1:p.nbins
-            @show i, j
+            println("$((i, j)) of $((p.nbins, p.nbins))")
             # integrate spheres
             s_atomic = Threads.Atomic{Float64}(0.0)
             Threads.@threads for idx1 in spheres[i]
@@ -134,7 +134,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
 
     for j in 1:p.nbins
         for i in 1:p.nbins
-            M_inv[i, j] = M_inv[i, j] * (2 * pi)^2 / (bin_width * bin_ks[i]^2 * bin_k[j]^2)
+            M_inv[i, j] = M_inv[i, j] * (2 * pi)^2 / (bin_width * bin_ks[i]^2 * bin_ks[j]^2)
         end
     end
 
