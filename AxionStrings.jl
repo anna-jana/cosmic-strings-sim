@@ -1,6 +1,5 @@
 module AxionStrings
 
-using PyPlot
 using FFTW
 using Random
 using StaticArrays
@@ -177,30 +176,15 @@ function make_step!(s :: State, p :: Parameter)
        s.next_phi, s.next_phi_dot, s.next_phi_dot_dot, s.phi, s.phi_dot, s.phi_dot_dot)
 end
 
+function run_simulation!(s::State, p::Parameter)
+    for i in 1:p.nsteps
+        println("$i of $(p.nsteps)")
+        make_step!(s, p)
+    end
+end
+
 include("energy.jl")
 include("strings.jl")
 include("spectrum.jl")
-
-function run_simulation!(s :: State, p :: Parameter)
-    energies = []
-    strings = []
-    spectra = []
-    for i in p.nsteps
-        make_step!(s, p)
-        if i % p.compute_energy_interval == 0
-            push!(energies, (s.tau, compute_energy(s, p)))
-        end
-        if i % p.compute_strings_interval == 0 || i % p.compute_spectrum_interval == 0
-            strings = detect_strings(s, p)
-        end
-        if i % p.compute_strings_interval == 0
-            push!(strings, (tau, map(length, strings)))
-        end
-        if i % p.compute_spectrum_interval == 0
-            push!(spectra, compute_spectrum(s, p, strings))
-        end
-    end
-    return energies, strings, spectra
-end
 
 end

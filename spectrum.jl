@@ -73,6 +73,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     physical_ks = fftfreq(p.N, 1 / dx_physical) * 2*pi
 
     # TODO: use preplaned ffts
+    # TODO: use rfft
     theta_dot_fft = fft(theta_dot)
 
     spheres = [Tuple{Int, Int, Int}[] for i in 1:p.nbins]
@@ -91,15 +92,16 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
         end
     end
 
+    bin_ks = [i * bin_width + bin_width/2 for i in 1:p.nbins]
+
     # P_field(k) = k^2 / L^3 \int d \Omega / 4\pi 0.5 * | field(k) |^2
     spectrum_uncorrected = zeros(p.nbins)
     for i in 1:p.nbins
-        bin_k = i * bin_width + bin_width/2.0
         for (ix, iy, iz) in spheres[i]
             spectrum_uncorrected[i] += abs2(theta_dot_fft[ix, iy, iz])
         end
         spectrum_uncorrected[i] *= surface_element[i]
-        spectrum_uncorrected[i] *= bin_k^2 / p.L^3 / (4 * pi) * 0.5
+        spectrum_uncorrected[i] *= bin_ks[i]^2 / p.L^3 / (4 * pi) * 0.5
     end
 
     W_fft = fft(W)
@@ -130,22 +132,20 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
 
     M_inv = inv(M)
 
-    for i in 1:p.nbins
-        for j in 1:p.nbins
-            bin_k_1 = i * bin_width + bin_width/2;
-            bin_k_2 = j * bin_width + bin_width/2;
-            M_inv[i, j] = M_inv[i, j] * (2 * pi)^2 / (bin_width * bin_k_1^2 * bin_k_2^2)
+    for j in 1:p.nbins
+        for i in 1:p.nbins
+            M_inv[i, j] = M_inv[i, j] * (2 * pi)^2 / (bin_width * bin_ks[i]^2 * bin_k[j]^2)
         end
     end
 
     spectrum_corrected = M_inv * spectrum_uncorrected # NOTE: matrix multiply!
 
     for i in p.nbins
-        bin_k = i * bin_width + bin_width/2
-        spectrum_corrected[i] *= bin_k^2 / p.L^3 / (2*pi^2) * bin_width
+        spectrum_corrected[i] *= bin_ks[i]^2 / p.L^3 / (2*pi^2) * bin_width
     end
 
-    return physical_ks, spectrum_corrected
+    return bin_ks, spectrum_corrected
 end
 
+# all(isapprox.(rfft(theat_dot), fft(theat_dot)[1:div(p.N, 2)+1, :, :]))
 

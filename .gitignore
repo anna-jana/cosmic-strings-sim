@@ -19,3 +19,4 @@ __pycache__
 *blx.bib
 *.npy
 Manifest.toml
+*.hdf5
