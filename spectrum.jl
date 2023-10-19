@@ -73,7 +73,6 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     physical_ks = fftfreq(p.N, 1 / dx_physical) * 2*pi
 
     # TODO: use preplaned ffts
-    # TODO: use rfft
     theta_dot_fft = rfft(theta_dot)
 
     spheres = [Tuple{Int, Int, Int}[] for i in 1:p.nbins]
@@ -112,7 +111,7 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     M = zeros(p.nbins, p.nbins)
     f = p.L^6 * (4 * pi)^2
     for i in 1:p.nbins
-        for j in 1:p.nbins
+        for j in i:p.nbins
             println("$((i, j)) of $((p.nbins, p.nbins))")
             # integrate spheres
             s_atomic = Threads.Atomic{Float64}(0.0)
