@@ -22,20 +22,19 @@ function make_step!(s :: State, p :: Parameter)
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
 
     # update the field ("position")
-    Threads.@threads for i in eachindex(s.next_phi)
-        @inbounds s.next_phi[i] = s.phi[i] + p.Delta_tau*s.phi_dot[i] + 0.5*p.Delta_tau^2*s.phi_dot_dot[i]
+    Threads.@threads for i in eachindex(s.phi)
+        @inbounds s.phi[i] += p.Delta_tau*s.phi_dot[i] + 0.5*p.Delta_tau^2*s.phi_dot_dot[i]
     end
 
     # update the field derivative ("velocity")
     compute_force!(s.next_phi_dot_dot, s, p)
 
-    Threads.@threads for i in eachindex(s.next_phi_dot)
-        @inbounds s.next_phi_dot[i] = s.phi_dot[i] + p.Delta_tau*0.5*(s.phi_dot_dot[i] + s.next_phi_dot_dot[i])
+    Threads.@threads for i in eachindex(s.phi_dot)
+        @inbounds s.phi_dot[i] += p.Delta_tau*0.5*(s.phi_dot_dot[i] + s.next_phi_dot_dot[i])
     end
 
     # swap current and next arrays
-    (s.phi, s.phi_dot, s.phi_dot_dot, s.next_phi, s.next_phi_dot, s.next_phi_dot_dot) = (
-       s.next_phi, s.next_phi_dot, s.next_phi_dot_dot, s.phi, s.phi_dot, s.phi_dot_dot)
+    (s.phi_dot_dot, s.next_phi_dot_dot) = (s.next_phi_dot_dot, s.phi_dot_dot)
 end
 
 function run_simulation!(s::State, p::Parameter)

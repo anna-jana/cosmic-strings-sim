@@ -23,17 +23,9 @@ Base.@kwdef struct Parameter
     tau_end :: Float64
     tau_span :: Float64
     nsteps :: Int
-
+    # params for spectrum computation
     nbins :: Int
     radius :: Int
-
-    # optaning analysis data from simulation
-    compute_energy_interval_tau :: Float64
-    compute_strings_interval_tau :: Float64
-    compute_spectrum_interval_tau :: Float64
-    compute_energy_interval :: Int
-    compute_strings_interval :: Int
-    compute_spectrum_interval :: Int
 end
 
 Base.@kwdef mutable struct State
@@ -42,8 +34,6 @@ Base.@kwdef mutable struct State
     phi :: Array{Complex{Float64}, 3}
     phi_dot :: Array{Complex{Float64}, 3}
     phi_dot_dot :: Array{Complex{Float64}, 3}
-    next_phi :: Array{Complex{Float64}, 3}
-    next_phi_dot :: Array{Complex{Float64}, 3}
     next_phi_dot_dot :: Array{Complex{Float64}, 3}
 end
 
@@ -81,6 +71,12 @@ function random_field(p :: Parameter)
     return ifft(hat)
 end
 
+function sim_params_from_physical_scale(log_end)
+    L = 1 / log_to_H(log_end)
+    N = ceil(Int, L * tau_to_a(log_to_tau(log_end)))
+    return L, N
+end
+
 function init(;
         log_start = 2.0,
         log_end = 3.0,
@@ -89,14 +85,11 @@ function init(;
         k_max = 1.0,
         nbins = 20,
         radius = 1,
-        compute_energy_interval_tau = 0.1,
-        compute_strings_interval_tau = 0.1,
-        compute_spectrum_interval_tau = 1.0,
     )
     Random.seed!(seed)
 
-    L = 1 / log_to_H(log_end)
-    N = ceil(Int, L * tau_to_a(log_to_tau(log_end)))
+    L, N = sim_params_from_physical_scale(log_end)
+
     tau_start = log_to_tau(log_start)
     tau_end = log_to_tau(log_end)
     tau_span = tau_end - tau_start
@@ -116,12 +109,6 @@ function init(;
         nsteps=ceil(Int, tau_span / Delta_tau),
         nbins=nbins,
         radius=radius,
-        compute_energy_interval_tau=compute_energy_interval_tau,
-        compute_strings_interval_tau=compute_strings_interval_tau,
-        compute_spectrum_interval_tau=compute_spectrum_interval_tau,
-        compute_energy_interval=floor(Int, Delta_tau / compute_energy_interval_tau),
-        compute_strings_interval=floor(Int, Delta_tau / compute_strings_interval_tau),
-        compute_spectrum_interval=floor(Int, Delta_tau / compute_spectrum_interval_tau),
    )
 
    s = State(
@@ -130,8 +117,6 @@ function init(;
         phi=random_field(p),
         phi_dot=random_field(p),
         phi_dot_dot=new_field_array(p),
-        next_phi=new_field_array(p),
-        next_phi_dot=new_field_array(p),
         next_phi_dot_dot=new_field_array(p),
    )
 

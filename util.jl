@@ -58,16 +58,20 @@ function load_spectrum(filename)
 end
 
 
-function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}})
+function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}}; colors_different=false)
     fig = figure()
     fig.add_subplot(projection="3d")
+
+    color = nothing
 
     for string in strings
         xs = [string[1][1]]
         ys = [string[1][2]]
         zs = [string[1][3]]
         prev = string[1]
-        color = nothing
+        if colors_different
+            color = nothing
+        end
 
         for p in string[2:end]
             if norm(p .- prev) <= sqrt(3)
@@ -100,3 +104,15 @@ function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector
     return nothing
 end
 
+function plot_required_size()
+    log_end = range(1.0, 9.0, 100)
+    required_N = [AxionStrings.sim_params_from_physical_scale(l)[2] for l in log_end]
+    required_bytes = @. 4 * 4 * required_N^3 / (1024^3)
+    plot(log_end, required_bytes, label="required by simulation")
+    axhline(8; color="k", ls="--", label="laptop")
+    xlabel("scale log(m_r / H)")
+    ylabel("giga bytes")
+    yscale("log")
+    legend()
+    show()
+end
