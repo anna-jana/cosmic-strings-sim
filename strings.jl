@@ -87,3 +87,8 @@ function detect_strings(s :: State, p :: Parameter)
     return strings
 end
 
+function total_string_length(p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
+    return p.dx * sum(strings) do s
+        sum(norm(s[i] .- s[mod1(i + 1, length(s))]) for i in 1:length(s))
+    end
+end

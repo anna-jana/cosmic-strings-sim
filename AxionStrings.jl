@@ -44,7 +44,7 @@ H_to_log(H) = log(1/H)
 t_to_tau(t) = -2*sqrt(t)
 log_to_tau(log) = t_to_tau(H_to_t(log_to_H(log)))
 t_to_a(t) = sqrt(t)
-tau_to_t(tau) = -0.5*(tau)^2
+tau_to_t(tau) = 0.5*(tau)^2
 tau_to_a(tau) = -0.5*tau
 tau_to_log(tau) = H_to_log(t_to_H(tau_to_t(tau)))
 

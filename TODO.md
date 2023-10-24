@@ -1,5 +1,6 @@
 # TODO list for cosmic string simulation
 
+## old todo
 [x] generate initial conditions using inverse FFT
 [x] propgatation algorithm
 [x] plot slices
@@ -46,3 +47,17 @@
     * fixed assining complex to double variable and then taking real/imag components in c uncorrected spectrum code
     * ----> uncorrected spectrum is the same
     * still need to check M and corrected spectrum computation
+
+## new todo
+[x] rewrite in julia
+[x] fft -> real fft
+[x] create animation of strings
+[ ] plot string length
+[ ] plot spectra
+[ ] study creation of initial conditions
+[ ] higher order time propagation algorithm
+[ ] higher order stecil for laplacian
+[ ] GPU code?
+[ ] compute spectrum and instantaeous spectrum (c)
+[ ] compute gamme factor for strings
+[ ] distributed memory paralism

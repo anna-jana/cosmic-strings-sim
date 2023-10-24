@@ -20,6 +20,7 @@ end
 function make_step!(s :: State, p :: Parameter)
     # propagate PDE using velocity verlet algorithm
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
+    s.step += 1
 
     # update the field ("position")
     Threads.@threads for i in eachindex(s.phi)
@@ -41,6 +42,20 @@ function run_simulation!(s::State, p::Parameter)
     for i in 1:p.nsteps
         println("$i of $(p.nsteps)")
         make_step!(s, p)
+    end
+end
+
+function run_simulation!(callback::Function, s::State, p::Parameter, ntimes::Int64)
+    every = div(p.nsteps, ntimes)
+    for i in 1:p.nsteps
+        println("$i of $(p.nsteps)")
+        if i % every == 0
+            callback()
+        end
+        make_step!(s, p)
+    end
+    if p.nsteps % every != 0
+        callback()
     end
 end
 

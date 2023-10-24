@@ -20,3 +20,4 @@ __pycache__
 *.npy
 Manifest.toml
 *.hdf5
+*.gif

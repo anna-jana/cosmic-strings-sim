@@ -2,6 +2,7 @@ using PyPlot
 using HDF5
 using StaticArrays
 using LinearAlgebra
+using DelimitedFiles
 
 include("AxionStrings.jl")
 
@@ -59,19 +60,15 @@ end
 
 
 function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}}; colors_different=false)
-    fig = figure()
+    fig = gcf()
     fig.add_subplot(projection="3d")
-
-    color = nothing
 
     for string in strings
         xs = [string[1][1]]
         ys = [string[1][2]]
         zs = [string[1][3]]
         prev = string[1]
-        if colors_different
-            color = nothing
-        end
+        color = nothing
 
         for p in string[2:end]
             if norm(p .- prev) <= sqrt(3)
@@ -79,7 +76,7 @@ function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector
                 push!(ys, p[2])
                 push!(zs, p[3])
             else
-                l, = plot(xs, ys, zs, color=color)
+                l, = plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
                 color = l.get_color()
                 xs = [p[1]]
                 ys = [p[2]]
@@ -94,12 +91,12 @@ function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector
             push!(zs, string[1][3])
         end
 
-        plot(xs, ys, zs, color=color)
+        plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
     end
 
-    xlabel("x")
-    ylabel("y")
-    zlabel("z")
+    xlabel(raw"$x m_r$")
+    ylabel(raw"$y m_r$")
+    zlabel(raw"$z m_r$")
 
     return nothing
 end
