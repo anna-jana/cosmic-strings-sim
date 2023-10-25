@@ -1,43 +1,45 @@
 include("AxionStrings.jl")
-include("util.jl")
 
 using PyPlot
 using DelimitedFiles
 using Printf
 
-# s, p = AxionStrings.init()
-# AxionStrings.run_simulation!(s, p)
-# strs = AxionStrings.detect_strings(s, p)
-
 s, p = AxionStrings.init()
+
 tmpdir = tempname()
 mkdir(tmpdir)
 files = String[]
-string_lengths = Float64[]
-taus = Float64[]
 ioff()
-AxionStrings.run_simulation!(s, p, 50) do
+
+string_lengths = []
+energies = []
+
+nframes = 50
+
+AxionStrings.run_simulation!(s, p, nframes) do
     println("plotting... ")
     strs = AxionStrings.detect_strings(s, p)
-    push!(string_lengths, AxionStrings.total_string_length(p, strs))
-    push!(taus, s.tau)
+    push!(string_lengths, (s.tau, AxionStrings.total_string_length(s, p, strs)))
+    push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
     figure()
-    plot_strings(p, strs; colors_different=false)
+    AxionStrings.plot_strings(p, strs; colors_different=false)
     title(raw"$\tau =$" * (@sprintf "%.2f" s.tau) * raw", $\log(m_r/H) = $" * (@sprintf "%.2f" AxionStrings.tau_to_log(s.tau)))
     fname = joinpath(tmpdir, "strings_step=$(s.step).jpg")
     savefig(fname)
     push!(files, fname)
     println("done")
 end
-println("writing strings lengths")
-writedlm("strings_length.csv", hcat(taus, string_lengths))
+
+println("writing data files")
+writedlm("string_length.dat", string_lengths)
+writedlm("energies.dat", energies)
 println("done")
+
 println("creating gif")
 outfile = "strings.gif"
-run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"],
-         files,
-         outfile)))
+run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"], files, outfile)))
 println("done")
+plt.close("all")
 ion()
 
 

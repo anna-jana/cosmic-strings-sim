@@ -4,6 +4,9 @@ using FFTW
 using Random
 using StaticArrays
 using LinearAlgebra
+using PyPlot
+using HDF5
+using DelimitedFiles
 
 Base.@kwdef struct Parameter
     # simulation domain in time in log units
@@ -129,5 +132,6 @@ include("propagation.jl")
 include("energy.jl")
 include("strings.jl")
 include("spectrum.jl")
+include("util.jl")
 
 end

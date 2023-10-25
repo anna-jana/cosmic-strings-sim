@@ -87,8 +87,11 @@ function detect_strings(s :: State, p :: Parameter)
     return strings
 end
 
-function total_string_length(p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
-    return p.dx * sum(strings) do s
-        sum(norm(s[i] .- s[mod1(i + 1, length(s))]) for i in 1:length(s))
+function total_string_length(s::State, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
+    a = tau_to_a(s.tau)
+    t = tau_to_t(s.tau)
+    l = p.dx * sum(strings) do s
+        sum(cyclic_dist_squared(p, s[i], s[mod1(i + 1, length(s))]) for i in 1:length(s))
     end
+    return a * l / (p.L^3 * a^3) * t^2
 end

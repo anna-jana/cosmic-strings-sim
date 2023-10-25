@@ -1,11 +1,3 @@
-using PyPlot
-using HDF5
-using StaticArrays
-using LinearAlgebra
-using DelimitedFiles
-
-include("AxionStrings.jl")
-
 function plot_energies(energies)
     (axion_kinetic, axion_gradient, axion_total,
             radial_kinetic, radial_gradient, radial_potential, radial_total,
