@@ -14,20 +14,33 @@ ioff()
 string_lengths = []
 energies = []
 
-nframes = 50
+ntimes = 50
+every = div(p.nsteps, ntimes)
 
-AxionStrings.run_simulation!(s, p, nframes) do
-    println("plotting... ")
-    strs = AxionStrings.detect_strings(s, p)
-    push!(string_lengths, (s.tau, AxionStrings.total_string_length(s, p, strs)))
-    push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
-    figure()
-    AxionStrings.plot_strings(p, strs; colors_different=false)
-    title(raw"$\tau =$" * (@sprintf "%.2f" s.tau) * raw", $\log(m_r/H) = $" * (@sprintf "%.2f" AxionStrings.tau_to_log(s.tau)))
-    fname = joinpath(tmpdir, "strings_step=$(s.step).jpg")
-    savefig(fname)
-    push!(files, fname)
-    println("done")
+for i in 1:p.nsteps
+    println("$i of $(p.nsteps)")
+    if i % every == 0 || i == p.nsteps
+        println("plotting... ")
+        strs = AxionStrings.detect_strings(s, p)
+        push!(string_lengths, (s.tau, AxionStrings.total_string_length(s, p, strs)))
+        push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
+        figure()
+        AxionStrings.plot_strings(p, strs; colors_different=false)
+        title(raw"$\tau =$" * (@sprintf "%.2f" s.tau) * raw", $\log(m_r/H) = $" *
+              (@sprintf "%.2f" AxionStrings.tau_to_log(s.tau)))
+        fname = joinpath(tmpdir, "strings_step=$(s.step).jpg")
+        savefig(fname)
+        push!(files, fname)
+        println("done")
+    end
+    if i == p.nsteps - 1
+        println("computing spectrum 1")
+        strs = AxionStrings.detect_strings(s, p)
+        @time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
+        writedlm("spectrum1.dat", hcat(wavenumber, power))
+        println("done")
+    end
+    AxionStrings.make_step!(s, p)
 end
 
 println("writing data files")
@@ -42,7 +55,10 @@ println("done")
 plt.close("all")
 ion()
 
-
-# spec = wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
+println("computing spectrum 2")
+strs = AxionStrings.detect_strings(s, p)
+@time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
+writedlm("spectrum2.dat", hcat(wavenumber, power))
+println("done")
 # plot(wavenumber, power)
 # save_spectrum(spec, "mc_spec.hdf5")

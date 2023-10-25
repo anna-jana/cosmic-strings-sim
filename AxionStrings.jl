@@ -5,7 +5,6 @@ using Random
 using StaticArrays
 using LinearAlgebra
 using PyPlot
-using HDF5
 using DelimitedFiles
 
 Base.@kwdef struct Parameter

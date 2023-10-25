@@ -32,25 +32,6 @@ function plot_spectrum(p :: AxionStrings.Parameter, bins, P_ppse)
     show()
 end
 
-function save_spectrum(spec, filename)
-    wavenumber, power = spec
-    h5open(filename, "w") do f
-        g = create_group(f, "spectrum")
-        g["wavenumber"] = collect(wavenumber)
-        g["power"] = power
-    end
-    return nothing
-end
-
-function load_spectrum(filename)
-    wavenumber, power = h5open(filename, "r") do f
-        g = read(f, "spectrum")
-        return g["wavenumber"], g["power"]
-    end
-    return wavenumber, power
-end
-
-
 function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}}; colors_different=false)
     fig = gcf()
     fig.add_subplot(projection="3d")
