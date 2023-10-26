@@ -1,38 +1,5 @@
-function plot_energies(energies)
-    (axion_kinetic, axion_gradient, axion_total,
-            radial_kinetic, radial_gradient, radial_potential, radial_total,
-            interaction, total) = [[e[i] for e in energies] for i in 1:length(energies[1])]
-    figure()
-    plot(log, axion_kinetic, color="tab:blue", ls="-", label="axion, kinetic")
-    plot(log, axion_gradient, color="tab:blue", ls="--", label="axion, gradient")
-    plot(log, axion_total, color="tab:blue", ls="-", lw=2, label="axion")
-    plot(log, radial_kinetic, color="tab:orange", ls="-", label="radial, kinetic")
-    plot(log, radial_gradient, color="tab:orange", ls="--", label="radial, gradient")
-    plot(log, radial_potential, color="tab:orange", ls=":", label="radial, potential")
-    plot(log, radial_total, color="tab:orange", ls="-", lw=2, label="radial")
-    plot(log, interaction, color="tab:green", ls="-", label="interaction axion and radial = strings")
-    plot(log, total, color="black", ls="-", lw=2, label="total energy density")
-    yscale("log")
-    xlabel(r"$log(m_r / H)$")
-    ax = gca()
-    ax.invert_xaxis()
-    ylabel(r"averaged energy density $f_a^2 m_r^2$\n")
-    legend()
-end
-
-function plot_spectrum(p :: AxionStrings.Parameter, bins, P_ppse)
-    figure()
-    step(bins, P_ppse, where="mid", label="corrected spectrum of free axions")
-    xlabel("k")
-    ylabel("P(k)")
-    xscale("log")
-    yscale("log")
-    title("log = $(p.log_end)")
-    legend()
-    show()
-end
-
-function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}}; colors_different=false)
+# function plot_strings(params :: AxionStrings.Parameter, strings :: Vector{Vector{SVector{3, Float64}}}; colors_different=false)
+function plot_strings(params :: AxionStrings.Parameter, strings; colors_different=false)
     fig = gcf()
     fig.add_subplot(projection="3d")
 
