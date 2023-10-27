@@ -15,7 +15,7 @@ strings = []
 ntimes = 50
 every = div(p.nsteps, ntimes)
 
-do_spectra = true
+do_spectra = false
 
 for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
