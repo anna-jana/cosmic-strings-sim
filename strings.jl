@@ -1,19 +1,19 @@
 # (string contention method from Moore at al.)
-@inline function crosses_real_axis(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Bool
-    return imag(phi1) * imag(phi2) < 0
+@inline function crosses_real_axis(psi1 :: Complex{Float64}, psi2 :: Complex{Float64}) :: Bool
+    return imag(psi1) * imag(psi2) < 0
 end
 
-@inline function handedness(phi1 :: Complex{Float64}, phi2 :: Complex{Float64}) :: Int
-    return sign(imag(phi1 * conj(phi2)))
+@inline function handedness(psi1 :: Complex{Float64}, psi2 :: Complex{Float64}) :: Int
+    return sign(imag(psi1 * conj(psi2)))
 end
 
-@inline function loop_contains_string(phi1 :: Complex{Float64}, phi2 :: Complex{Float64},
-                              phi3 :: Complex{Float64}, phi4 :: Complex{Float64})
+@inline function loop_contains_string(psi1 :: Complex{Float64}, psi2 :: Complex{Float64},
+                              psi3 :: Complex{Float64}, psi4 :: Complex{Float64})
     loop = (
-          crosses_real_axis(phi1, phi2) * handedness(phi1, phi2)
-        + crosses_real_axis(phi2, phi3) * handedness(phi2, phi3)
-        + crosses_real_axis(phi3, phi4) * handedness(phi3, phi4)
-        + crosses_real_axis(phi4, phi1) * handedness(phi4, phi1)
+          crosses_real_axis(psi1, psi2) * handedness(psi1, psi2)
+        + crosses_real_axis(psi2, psi3) * handedness(psi2, psi3)
+        + crosses_real_axis(psi3, psi4) * handedness(psi3, psi4)
+        + crosses_real_axis(psi4, psi1) * handedness(psi4, psi1)
     )
     return abs(loop) == 2
 end
@@ -39,16 +39,16 @@ function detect_strings(s :: State, p :: Parameter)
     @inbounds for iz in 1:p.N
         @inbounds for iy in 1:p.N
             @inbounds for ix in 1:p.N
-                if loop_contains_string(s.phi[ix, iy, iz], s.phi[mod1(ix + 1, p.N), iy, iz],
-                                        s.phi[mod1(ix + 1, p.N), mod1(iy + 1, p.N), iz], s.phi[ix, mod1(iy + 1, p.N), iz])
+                if loop_contains_string(s.psi[ix, iy, iz], s.psi[mod1(ix + 1, p.N), iy, iz],
+                                        s.psi[mod1(ix + 1, p.N), mod1(iy + 1, p.N), iz], s.psi[ix, mod1(iy + 1, p.N), iz])
                     push!(string_points, SVector(ix - 1 + 0.5, iy - 1 + 0.5, iz))
                 end
-                if loop_contains_string(s.phi[ix, iy, iz], s.phi[ix, mod1(iy + 1, p.N), iz],
-                                        s.phi[ix, mod1(iy + 1, p.N), mod1(iz + 1, p.N)], s.phi[ix, iy, mod1(iz + 1, p.N)])
+                if loop_contains_string(s.psi[ix, iy, iz], s.psi[ix, mod1(iy + 1, p.N), iz],
+                                        s.psi[ix, mod1(iy + 1, p.N), mod1(iz + 1, p.N)], s.psi[ix, iy, mod1(iz + 1, p.N)])
                     push!(string_points, SVector(ix, iy - 1 + 0.5, iz - 1 + 0.5))
                 end
-                if loop_contains_string(s.phi[ix, iy, iz], s.phi[ix, iy, mod1(iz + 1, p.N)],
-                                        s.phi[mod1(ix + 1, p.N), iy, mod1(iz + 1, p.N)], s.phi[mod1(ix + 1, p.N), iy, iz])
+                if loop_contains_string(s.psi[ix, iy, iz], s.psi[ix, iy, mod1(iz + 1, p.N)],
+                                        s.psi[mod1(ix + 1, p.N), iy, mod1(iz + 1, p.N)], s.psi[mod1(ix + 1, p.N), iy, iz])
                     push!(string_points, SVector(ix - 1 + 0.5, iy, iz - 1 + 0.5))
                 end
             end

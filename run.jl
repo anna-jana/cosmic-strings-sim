@@ -15,7 +15,7 @@ strings = []
 ntimes = 50
 every = div(p.nsteps, ntimes)
 
-do_spectra = false
+do_spectra = true
 
 for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
@@ -51,4 +51,4 @@ if do_spectra
     println("done")
 end
 
-@show hash(s.phi)
+@show hash(s.psi)

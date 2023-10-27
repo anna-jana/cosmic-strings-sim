@@ -1,8 +1,8 @@
-@inline function compute_theta_dot(a :: Float64, phi :: Complex{Float64}, phi_dot :: Complex{Float64})
-    R = real(phi)
-    I = imag(phi)
-    R_dot = real(phi_dot)
-    I_dot = imag(phi_dot)
+@inline function compute_theta_dot(a :: Float64, psi :: Complex{Float64}, psi_dot :: Complex{Float64})
+    R = real(psi)
+    I = imag(psi)
+    R_dot = real(psi_dot)
+    I_dot = imag(psi_dot)
     d_theta_d_tau = (I_dot * R - I * R_dot) / (R^2 - I^2)
     return d_theta_d_tau / a
 end
@@ -32,7 +32,7 @@ end
 # -> the spectrum of number denseties of axtion
 function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{SVector{3, Float64}}})
     a = tau_to_a(s.tau)
-    theta_dot = compute_theta_dot.(a, s.phi, s.phi_dot)
+    theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
 
     # compute W (string mask)
     W = ones(p.N, p.N, p.N)
@@ -147,6 +147,31 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
     end
 
     return bin_ks, spectrum_corrected
+end
+
+function compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2)
+    k_min = max(k1[1], k2[1])
+    k_max = min(k1[end], k2[end])
+    ks = range(k_min, k_max, length=length(k1))
+
+    P1_interp = linear_interpolation(k1, P1)(ks)
+    P2_interp = linear_interpolation(k2, P2)(ks)
+
+    t1 = AxionStrings.tau_to_t(tau1)
+    t2 = AxionStrings.tau_to_t(tau2)
+    a1 = AxionStrings.tau_to_a(tau1)
+    a2 = AxionStrings.tau_to_a(tau2)
+
+    t_mid = (t2 + t1) / 2
+    a_mid = AxionStrings.t_to_a(t_mid)
+    log_mid = AxionStrings.tau_to_log(AxionStrings.t_to_tau(t_mid))
+
+    F = @. (a2^3 * P2_interp - a1^3 * P1_interp) / (t2 - t1) / a_mid^3
+
+    A = sum(@. (F[2:end] + F[1:end-1]) / 2 * (ks[2:end] + ks[1:end-1]) / 2)
+    F ./= A
+
+    return log_mid, ks, F
 end
 
 # all(isapprox.(rfft(theat_dot), fft(theat_dot)[1:div(p.N, 2)+1, :, :]))

@@ -6,6 +6,8 @@ using StaticArrays
 using LinearAlgebra
 using PyPlot
 using DelimitedFiles
+using Interpolations
+using Statistics
 
 Base.@kwdef struct Parameter
     # simulation domain in time in log units
@@ -33,21 +35,21 @@ end
 Base.@kwdef mutable struct State
     tau :: Float64
     step :: Int
-    phi :: Array{Complex{Float64}, 3}
-    phi_dot :: Array{Complex{Float64}, 3}
-    phi_dot_dot :: Array{Complex{Float64}, 3}
-    next_phi_dot_dot :: Array{Complex{Float64}, 3}
+    psi :: Array{Complex{Float64}, 3}
+    psi_dot :: Array{Complex{Float64}, 3}
+    psi_dot_dot :: Array{Complex{Float64}, 3}
+    next_psi_dot_dot :: Array{Complex{Float64}, 3}
 end
 
 log_to_H(l) = 1.0 / exp(l)
 H_to_t(H) = 1 / (2*H)
 t_to_H(t) = 1 / (2*t)
 H_to_log(H) = log(1/H)
-t_to_tau(t) = -2*sqrt(t)
+t_to_tau(t) = 2*sqrt(t)
 log_to_tau(log) = t_to_tau(H_to_t(log_to_H(log)))
 t_to_a(t) = sqrt(t)
 tau_to_t(tau) = 0.5*(tau)^2
-tau_to_a(tau) = -0.5*tau
+tau_to_a(tau) = 0.5*tau
 tau_to_log(tau) = H_to_log(t_to_H(tau_to_t(tau)))
 
 const field_max = 1 / sqrt(2)
@@ -70,7 +72,8 @@ function random_field(p :: Parameter)
             end
         end
     end
-    return ifft(hat)
+    field = ifft(hat)
+    return field ./ mean(abs.(field))
 end
 
 function sim_params_from_physical_scale(log_end)
@@ -82,7 +85,7 @@ end
 function init(;
         log_start = 2.0,
         log_end = 3.0,
-        Delta_tau = -1e-2,
+        Delta_tau = 1e-2,
         seed = 42,
         k_max = 1.0,
         nbins = 20,
@@ -116,13 +119,13 @@ function init(;
    s = State(
         tau=tau_start,
         step=0,
-        phi=random_field(p),
-        phi_dot=random_field(p),
-        phi_dot_dot=new_field_array(p),
-        next_phi_dot_dot=new_field_array(p),
+        psi=random_field(p),
+        psi_dot=random_field(p),
+        psi_dot_dot=new_field_array(p),
+        next_psi_dot_dot=new_field_array(p),
    )
 
-   compute_force!(s.phi_dot_dot, s, p)
+   compute_force!(s.psi_dot_dot, s, p)
 
    return s, p
 end

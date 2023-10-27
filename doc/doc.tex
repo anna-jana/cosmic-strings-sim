@@ -45,6 +45,17 @@ where
     \frac{\mathrm{d} 1/a}{\mathrm{d} \tau} = - a' / a^2 = - a \dot{a} / a^2 = - H
 \end{equation}
 
+\begin{equation}
+    a = a_1 t^{1/2}
+\end{equation}
+\begin{equation}
+    H = \frac{1}{2t}
+\end{equation}
+
+\begin{equation}
+    \tau(t) = \int_0^t \mathrm{d} t' a^{-1}(t') = \int_0^t \mathrm{d} t' a_1 t^{-1/2} = 2 a_1 t^{1/2}
+\end{equation}
+
 \section{Model}
 
 Based on the paper by Gorghetto et al. \cite{axions_from_strings}.
@@ -70,8 +81,11 @@ Equation of Motion from the Lagragian:
     \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi \frac{m_r^2}{f_a^2} \left( |\phi|^2 - \frac{f_a^2}{2} \right) = 0
 \end{equation}
 
-Here the nabla is with respect to comoving coordinates. They are related to physical (distances) coordinates by $x_\mathrm{physical} = a(t) x_\mathrm{comoving}$.
-In physical coordinates in the equation of motion the nabal is to be replaced $\nabla \to \nabla / a(t)^2$.
+Here the nabla is with respect to physical coordinates. They are related to comoving  coordinates by $x_\mathrm{physical} = a(t) x_\mathrm{comoving}$.
+In comoving coordinates in the equation of motion the nabal is to be replaced $\nabla \to \nabla / a(t)^2$.
+\begin{equation}
+    (\nabla f)_i = \frac{\partial f}{\partial x_i} = \frac{\partial f}{\partial a(t) x_{\mathrm{comoving}, i}} = (\tilde{\nabla} f)_i / a^2(t)
+\end{equation}
 
 % \begin{equation}
 %     \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi m_r^2 \left( \frac{|\phi|^2}{f_a^2} - \frac{1}{2} \right) = 0
@@ -147,32 +161,18 @@ Now use unprimed quantities and use the prime as the derivative with respect to 
     - \nabla^2 \psi a^2 + \psi ( |\psi|^2 - \frac{a^2}{2} ) = 0
 \end{equation}
 
+Finally we go to comoving coordinates $\tilde{x}$ defined by
 \begin{equation}
     \tilde{x} = x' / a
 \end{equation}
+and denote the spacial derivative with respect to the comoving coordinates by $\tilde{\nabla}$.
 
 \begin{equation}
     \psi'' - \tilde{\nabla}^2 \psi + \psi ( |\psi|^2 - \frac{a^2}{2} ) = 0
 \end{equation}
 
 \begin{equation}
-    a = a_1 t^{1/2}
-\end{equation}
-\begin{equation}
-    H = \frac{1}{2t}
-\end{equation}
-
-\begin{equation}
-    \tau(t) = \int_0^t \mathrm{d} t' a^{-1}(t') = \int_0^t \mathrm{d} t' a_1 t^{-1/2} = -2 a_1 t^{1/2}
-\end{equation}
-
-\begin{equation}
-    \phi_\mathrm{physical} = f_a \phi_\mathrm{simulation} / a(t)
-\end{equation}
-
-From now on we call $\psi$ $\phi'$.
-\begin{equation}
-    \phi= f_a \phi' / a(t)
+    \phi_\mathrm{physical} = f_a \psi / a(t)
 \end{equation}
 
 \section{Energies}
@@ -183,6 +183,7 @@ From now on we call $\psi$ $\phi'$.
 \end{equation}
 
 \subsection{The Hamiltonian Density}
+In physical coordinates and field basis:
 \begin{equation}
     \mathcal{H} =
     \underbrace{\frac{1}{2} \dot{\varphi}^2 + \frac{1}{2} (\nabla \varphi)^2}_{= \mathrm{axion}} +
@@ -192,10 +193,12 @@ From now on we call $\psi$ $\phi'$.
 
 \subsection{Axion:}
 
+field definition and conversion:
 \begin{equation}
-    \varphi = f_a \theta = f_a \arg(\phi_\mathrm{physical}) = f_a \arg(\phi_\mathrm{simulation})
+    \varphi = f_a \theta = f_a \arg(\phi_\mathrm{physical}) = f_a \arg(\psi)
 \end{equation}
 
+kinetic:
 \begin{align}
     &\frac{1}{2} \dot{\varphi}^2 = \frac{1}{2} f_a^2 \dot{\theta}^2
     = \frac{1}{2} f_a^2 \left( \frac{\mathrm{d} \theta}{\mathrm{d} t} \right)^2
@@ -206,6 +209,13 @@ From now on we call $\psi$ $\phi'$.
 \end{align}
 
 \begin{align}
+    \partial_\tau \theta &= \partial_\tau \arg(\phi) = \partial_\tau \arg(\psi) = \partial_\tau \arctan \left( \frac{ \Im \psi }{ \Re \psi } \right)
+    = \frac{ \frac{ \partial_\tau \Im \psi }{ \Re \psi } - \frac{ \Im \psi \cdot \partial_\tau \Re \psi}{(\Re \psi)^2}}{ 1 + \left( \frac{\Im \psi}{\Re \psi} \right)^2} \\
+                         &= \frac{ \Re \psi \partial_\tau \Im \psi - \Im \psi \cdot \partial_\tau \Re \psi}{ (\Re \psi)^2 + (\Im \psi)^2} =  \frac{ \Re \psi \partial_\tau \Im \psi - \Im \psi \cdot \partial_\tau \Re \psi}{|\psi|^2}
+\end{align}
+
+gradient:
+\begin{align}
  &\frac{1}{2} (\nabla \varphi)^2 =
  \frac{1}{2} f_a^2 \sum_i \left(\frac{\partial \theta}{\partial x_i}\right)^2 = \\
  &\frac{1}{2} f_a^2 \sum_i \left(\frac{\partial \theta}{\partial x'_i / m_r}\right)^2 =
@@ -214,71 +224,75 @@ From now on we call $\psi$ $\phi'$.
 \end{align}
 
 \begin{equation}
-    \partial_\tau \theta = \partial_\tau \arg(\phi) = \partial_\tau \arctan \left( \frac{ \Im \phi }{ \Re \phi } \right)
-    = \frac{ \frac{ \partial_\tau \Im \phi }{ \Re \phi } - \frac{ \Im \phi \cdot \partial_\tau}{(\Re \phi)^2}}{ 1 - \left( \frac{\Im \phi}{\Re \phi} \right)^2}
-    = \frac{ \Re \phi \partial_\tau \Im \phi - \Im \phi \cdot \partial_\tau \Re \phi}{ (\Re \phi)^2 - (\Im \phi)^2}
+    \frac{1}{2} (\nabla \varphi)^2 = \frac{1}{2} f_a^2 m_r^2 (\tilde{\nabla} \varphi)^2 / a(t)^2
 \end{equation}
 
 \subsection{Radial Mode:}
 
+Field definition and conversion
 \begin{equation}
     \phi(x) = \frac{r(x) + f_a}{\sqrt{2}} e^{i \theta(x) }
 \end{equation}
 
 \begin{equation}
+    |\phi| = \frac{r + f_a}{\sqrt{2}}
+\end{equation}
+
+\begin{equation}
     r = \sqrt{2} |\phi| - f_a
-    = \sqrt{2} f_a |\phi'| / a(t) - f_a
-    = f_a \left( \sqrt{2} |\phi'| / a(t) - 1 \right)
+    = \sqrt{2} f_a |\psi| / a(t) - f_a
+    = f_a \left( \sqrt{2} |\psi| / a(t) - 1 \right)
     \equiv f_a r'
 \end{equation}
 
 \begin{equation}
-    |\phi| = \frac{r - f_a}{\sqrt{2}}
+    r' = r / f_a = \sqrt{2} |\psi| / a(t) - 1
 \end{equation}
 
-\begin{equation}
-    r' = r / f_a = \sqrt{2} |\phi'| / a(t) - 1
-\end{equation}
-
+kinetic:
 \begin{equation}
     \frac{1}{2} \dot{r}^2 = \frac{1}{2} (\frac{\partial}{\partial t} r)^2
     = \frac{1}{2} (\frac{f_a m_r}{a(t)})^2 \left( \partial_\tau r' \right)^2
 \end{equation}
 
+\begin{align}
+    \partial_\tau r' = \partial_\tau \left( \sqrt{2} |\psi| / a - 1 \right)
+    &= \sqrt{2} \partial_\tau ( |\psi| / a ) \\
+    &= \sqrt{2} (\partial_\tau |\psi| / a - \partial_\tau a |\psi| / a^2) \\
+    &= \sqrt{2} (\partial_\tau |\psi| / a - \dot{a} a |\psi| / a^2) \\
+    &= \sqrt{2} (\partial_\tau |\psi| / a - H |\psi|)
+\end{align}
+
+\begin{align}
+    \partial_\tau |\psi| &= \partial_\tau \sqrt{ (\Re \psi)^2 + (\Im \psi)^2 } \\
+                         &= \frac{ \partial_\tau ((\Re \psi)^2 + (\Im \psi)^2) }{ 2 \sqrt{ (\Re \psi)^2 + (\Im \psi)^2 } } \\
+                         &= \frac{ 2 \Re \psi \partial_\tau \Re \psi + 2 \Im \psi \partial_\tau \Im \psi }{ 2 \sqrt{ (\Re \psi)^2 + (\Im \psi)^2 } } \\
+                         &= \frac{ \Re \psi \partial_\tau \Re \psi + \Im \psi \partial_\tau \Im \psi }{ |\psi| }
+\end{align}
+
+gradient:
 \begin{equation}
     \frac{1}{2} (\nabla r)^2 = \frac{1}{2} f_a^2 m_r^2 ( \nabla' r')^2
+    = \frac{1}{2} f_a^2 m_r^2 ( \tilde{\nabla} r')^2 / a(t)^2
 \end{equation}
 
+potential:
 \begin{equation}
     V(\phi) = \frac{m_r^2}{2 f_a^2}\left( |\phi|^2 - \frac{f_a^2}{2} \right)^2
 \end{equation}
 
 \begin{align}
-    &V(\phi) = V(|\phi|) = V(\frac{r - f_a}{\sqrt{2}})
-    = V \left(f_a \left( \frac{r' - 1}{\sqrt{2}} \right) \right) \\
-    &= \frac{m_r^2}{2 f_a^2}\left( \left(f_a \left( \frac{r' - 1}{\sqrt{2}} \right) \right)^2 - \frac{f_a^2}{2} \right)^2 \\
-    &= m_r^2 f_a^2 / 8 ( (r' - 1)^2 - 1)
-    = m_r^2 f_a^2 / 8 ( r'^2 - 2 r' )^2
-\end{align}
-
-\begin{align}
-    \partial_\tau r' = \partial_\tau f_a \left( \sqrt{2} |\phi'| / a - 1 \right)
-    &= f_a \sqrt{2} \partial_\tau ( |\phi'| / a ) \\
-    &= f_a \sqrt{2} (\partial_\tau |\phi'| / a - \partial_\tau a |\phi'| / a^2) \\
-    &= f_a \sqrt{2} (\partial_\tau |\phi'| / a + 0.5 |\phi'| / a^2)
-\end{align}
-
-\begin{align}
-    \partial_\tau |\phi| &= \partial_\tau \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } \\
-                         &= \frac{ \partial_\tau ((\Re \phi)^2 + (\Im \phi)^2) }{ 2 \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } } \\
-                         &= \frac{ 2 \Re \phi \partial_\tau \Re \phi + 2 \Im \phi \partial_\tau \Im \phi }{ 2 \sqrt{ (\Re \phi)^2 + (\Im \phi)^2 } } \\
-                         &= \frac{ \Re \phi \partial_\tau \Re \phi + \Im \phi \partial_\tau \Im \phi }{ |\phi| }
+    &V(\phi) = V(|\phi|) = V(\frac{r + f_a}{\sqrt{2}})
+    = V \left(f_a \left( \frac{r' + 1}{\sqrt{2}} \right) \right) \\
+    &= \frac{m_r^2}{2 f_a^2}\left( \left(f_a \left( \frac{r' + 1}{\sqrt{2}} \right) \right)^2 - \frac{f_a^2}{2} \right)^2 \\
+    &= m_r^2 f_a^2 / 8 ( (r' + 1)^2 - 1)
+    = m_r^2 f_a^2 / 8 ( r'^2 + 2 r' )^2
 \end{align}
 
 \subsection{Interaction:}
 \begin{equation}
 \left( \frac{r^2}{f_a^2} + 2 \frac{r}{f_a} \right) \left( \frac{1}{2} \dot{\varphi}^2 + \frac{1}{2} (\nabla \varphi)^2 \right)
-= f_a^2 m_r^2 (r'^2 + 2 r) \left( \frac{1}{2} (\partial_\tau \theta )^2 + \frac{1}{2} (\nabla' \theta)^2 \right)
+= f_a^2 m_r^2 (r'^2 + 2 r') \left( \frac{1}{2} (\partial_\tau \theta )^2 + \frac{1}{2} (\tilde{\nabla} \theta)^2 / a(t)^2 \right)
 \end{equation}
 
 \section{Spectrum Estimation}
@@ -286,7 +300,7 @@ From now on we call $\psi$ $\phi'$.
 We use the method described in \cite[sec. 3.2]{improved_estimation_hiramatsu}.
 
 \begin{equation}
-    \frac{1}{2} \langle \dot{a}(\vec{k}, t)^* \dot{a}(\vec{k}', t) \rangle = \frac{(2\pi)^3}{k^2} \delta^{(3)}(\vec[{k} - \vec{k}') P(k, t)
+    \frac{1}{2} \langle \dot{a}(\vec{k}, t)^* \dot{a}(\vec{k}', t) \rangle = \frac{(2\pi)^3}{k^2} \delta^{(3)}(\vec{k} - \vec{k}') P(k, t)
 \end{equation}
 
 \begin{equation}
