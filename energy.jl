@@ -26,7 +26,7 @@ function compute_energy(s :: State, p :: Parameter)
                     # gradient
                     diff_theta_x = theta[mod1(ix + 1, p.N), iy, iz] - theta[mod1(ix - 1, p.N), iy, iz]
                     diff_theta_y = theta[ix, mod1(iy + 1, p.N), iz] - theta[ix, mod1(iy - 1, p.N), iz]
-                    diff_theta_z = theta[ix, iy, mod1(iz - 1, p.N)] - theta[ix, iy, mod1(iz - 1, p.N)]
+                    diff_theta_z = theta[ix, iy, mod1(iz + 1, p.N)] - theta[ix, iy, mod1(iz - 1, p.N)]
                     axion_gradient = 0.5 / p.dx^2 * (diff_theta_x^2 + diff_theta_y^2 + diff_theta_z^2)
 
                     # radial mode
@@ -36,7 +36,7 @@ function compute_energy(s :: State, p :: Parameter)
                     # gradient
                     diff_radial_x = radial[mod1(ix + 1, p.N), iy, iz] - radial[mod1(ix - 1, p.N), iy, iz]
                     diff_radial_y = radial[ix, mod1(iy + 1, p.N), iz] - radial[ix, mod1(iy - 1, p.N), iz]
-                    diff_radial_z = radial[ix, iy, mod1(iz - 1, p.N)] - radial[ix, iy, mod1(iz - 1, p.N)]
+                    diff_radial_z = radial[ix, iy, mod1(iz + 1, p.N)] - radial[ix, iy, mod1(iz - 1, p.N)]
                     radial_gradient = 0.5 / p.dx^2 * (diff_radial_x^2 + diff_radial_y^2 + diff_radial_z^2)
 
                     # potential

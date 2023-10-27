@@ -15,6 +15,8 @@ strings = []
 ntimes = 50
 every = div(p.nsteps, ntimes)
 
+do_spectra = true
+
 for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
     if i % every == 0 || i == p.nsteps
@@ -25,7 +27,7 @@ for i in 1:p.nsteps
         push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
         println("done")
     end
-    if i == p.nsteps - 1
+    if i == p.nsteps - 1 && do_spectra
         println("computing spectrum 1")
         strs = AxionStrings.detect_strings(s, p)
         @time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
@@ -41,8 +43,12 @@ writedlm("energies.dat", energies)
 write("strings.json", json(strings))
 println("done")
 
-println("computing spectrum 2")
-strs = AxionStrings.detect_strings(s, p)
-@time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
-writedlm("spectrum2.dat", hcat(wavenumber, power))
-println("done")
+if do_spectra
+    println("computing spectrum 2")
+    strs = AxionStrings.detect_strings(s, p)
+    @time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
+    writedlm("spectrum2.dat", hcat(wavenumber, power))
+    println("done")
+end
+
+@show hash(s.phi)

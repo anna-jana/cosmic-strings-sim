@@ -116,10 +116,11 @@ files = String[]
 strings = JSON.parse(read("strings.json", String))
 
 println("plotting all frames")
+figure()
 for (i, (tau, any_strs)) in enumerate(strings)
-    strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
+    local strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
     println("$i of $(length(strings))")
-    figure()
+    clf()
     AxionStrings.plot_strings(p, strs; colors_different=false)
     title(raw"$\tau =$" * (@sprintf "%.2f" tau) * raw", $\log(m_r/H) = $" *
           (@sprintf "%.2f" AxionStrings.tau_to_log(tau)))

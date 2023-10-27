@@ -118,6 +118,9 @@ function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{S
             Threads.@threads for idx1 in spheres[i]
                 for idx2 in spheres[j]
                     ix = substract_wave_numbers(p, idx1[1] - 1, idx2[1] - 1)
+                    if ix >= size(W_fft, 1)
+                        ix = ix - size(W_fft, 1)
+                    end
                     iy = substract_wave_numbers(p, idx1[2] - 1, idx2[2] - 1)
                     iz = substract_wave_numbers(p, idx1[3] - 1, idx2[3] - 1)
                     Threads.atomic_add!(s_atomic, abs2(@inbounds W_fft[ix + 1, iy + 1, iz + 1]))
