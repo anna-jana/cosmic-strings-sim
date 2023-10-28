@@ -83,13 +83,13 @@ function sim_params_from_physical_scale(log_end)
 end
 
 function init(;
-        log_start = 2.0,
-        log_end = 3.0,
-        Delta_tau = 1e-2,
-        seed = 42,
-        k_max = 1.0,
-        nbins = 20,
-        radius = 1,
+        log_start,
+        log_end,
+        Delta_tau,
+        seed,
+        k_max,
+        nbins,
+        radius,
     )
     Random.seed!(seed)
 

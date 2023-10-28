@@ -4,7 +4,15 @@ using DelimitedFiles
 using Printf
 using JSON
 
-s, p = AxionStrings.init()
+s, p = AxionStrings.init(;
+    log_start = 2.0,
+    log_end = 3.0,
+    Delta_tau = 1e-2,
+    seed = 42,
+    k_max = 1.0,
+    nbins = 20,
+    radius = 1,
+)
 
 write("parameter.json", json(p))
 
