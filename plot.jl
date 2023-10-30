@@ -103,6 +103,48 @@ ylabel(raw"$\zeta = a l / a^3 L^3 \times t^2$")
 savefig("string_length.pdf")
 
 # string movie
+function plot_strings(params :: AxionStrings.Parameter, strings; colors_different=false)
+    fig = gcf()
+    fig.add_subplot(projection="3d")
+
+    for string in strings
+        xs = [string[1][1]]
+        ys = [string[1][2]]
+        zs = [string[1][3]]
+        prev = string[1]
+        color = nothing
+
+        for p in string[2:end]
+            if norm(p .- prev) <= sqrt(3)
+                push!(xs, p[1])
+                push!(ys, p[2])
+                push!(zs, p[3])
+            else
+                l, = plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
+                color = l.get_color()
+                xs = [p[1]]
+                ys = [p[2]]
+                zs = [p[3]]
+            end
+            prev = p
+        end
+
+        if norm(string[1] - string[end]) <= sqrt(3)
+            push!(xs, string[1][1])
+            push!(ys, string[1][2])
+            push!(zs, string[1][3])
+        end
+
+        plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
+    end
+
+    xlabel(raw"$x m_r$")
+    ylabel(raw"$y m_r$")
+    zlabel(raw"$z m_r$")
+
+    return nothing
+end
+
 tmpdir = tempname()
 mkdir(tmpdir)
 files = String[]
@@ -114,7 +156,7 @@ for (i, (tau, any_strs)) in enumerate(strings)
     local strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
     println("$i of $(length(strings))")
     clf()
-    AxionStrings.plot_strings(p, strs; colors_different=false)
+    plot_strings(p, strs; colors_different=false)
     title(raw"$\tau =$" * (@sprintf "%.2f" tau) * raw", $\log(m_r/H) = $" *
           (@sprintf "%.2f" AxionStrings.tau_to_log(tau)))
     fname = joinpath(tmpdir, "strings_step=$i.jpg")
