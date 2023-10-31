@@ -1,7 +1,4 @@
-using MPI
-using Random
-
-# mpirun -n 4 julia --project=. mpi_gol.jl
+# mpirun -n 4 julia --project=. mpi.jl
 
 # splitting the grid into subboxes for each node such that the required communication
 # i.e. the sum of surfaces of each subbox is minimal
@@ -78,36 +75,6 @@ function distributed_grid(grid_dimension, num_nodes)
     return (; boxes, axis_lengths, node_id_to_box_size, node_id_to_box_index, box_index_to_node_id)
 end
 
-# mpi setup
-MPI.Init()
-comm = MPI.COMM_WORLD
-nprocs = MPI.Comm_size(comm)
-rank = MPI.Comm_rank(comm)
-
-print("begin setup $rank\n")
-
-# setup the grid (divide the simulation into subboxes for each node)
-N = 64 # TODO: use the value from parameters
-global_grid_dimension = (N, N, N)
-grid = distributed_grid(global_grid_dimension, nprocs)
-
-# subbox setup
-lnx, lny, lnz = grid.node_id_to_box_size[rank]
-own_subbox = Array{Float64}(undef, lnx + 2, lny + 2, lnz + 2)
-Random.seed!(rank)
-# TODO: real setup
-own = rand(lnx, lny, lnz)
-own_subbox[2:end-1, 2:end-1, 2:end-1] = own
-
-# setup for exchanging data with neighboring subboxes/nodes
-own_subbox_index = grid.node_id_to_box_index[rank]
-
-struct Neighbor
-    rank::Int
-    offset::Tuple{Int, Int, Int}
-    receive_buffer::Array{Float64, 3}
-end
-
 function get_send_index(off, ln)
     if off == -1
         return 2
@@ -134,101 +101,136 @@ function get_receive_index(off, ln)
     end
 end
 
-
-neighbors = Neighbor[]
-for dim in 1:3
-    for side in (1, -1)
-        offset = [0, 0, 0]
-        offset[dim] = side
-
-        neighbor_index = mod1.(own_subbox_index .+ offset, grid.axis_lengths)
-        neighbor_id = grid.box_index_to_node_id[tuple(neighbor_index...)]
-
-
-        rcvbuf = Array{Float64}(undef,
-                                length(get_receive_index(offset[1], lnx)),
-                                length(get_receive_index(offset[2], lny)),
-                                length(get_receive_index(offset[3], lnz)),)
-
-        neighbor = Neighbor(neighbor_id, tuple(offset...), rcvbuf)
-
-        push!(neighbors, neighbor)
-    end
+struct Neighbor
+    rank::Int
+    offset::Tuple{Int, Int, Int}
+    receive_buffer::Array{Float64, 3}
 end
 
-if rank == 0
-    print(neighbors)
+Base.@kwdef mutable struct MPIState
+    state::State
+    p::Parameter
+    lnx::Int
+    lny::Int
+    lnz::Int
+    neighbors::Vector{Neighbor}
+    comm::MPI.Comm
+    rank::Int
+    requests::Vector{MPI.Request}
 end
 
+function init_state_mpi(p::Parameter)
+    # mpi setup
+    MPI.Init()
+    comm = MPI.COMM_WORLD
+    nprocs = MPI.Comm_size(comm)
+    rank = MPI.Comm_rank(comm)
+    print("begin setup $rank\n")
 
-MPI.Barrier(comm)
+    # setup the grid (divide the simulation into subboxes for each node)
+    global_grid_dimension = (p.N, p.N, p.N)
+    grid = distributed_grid(global_grid_dimension, nprocs)
 
-requests = MPI.Request[]
+    # subbox setup
+    Random.seed!(p.seed * rank)
+    lnx, lny, lnz = grid.node_id_to_box_size[rank]
 
-print("starting simulation loop $rank\n")
+    # setup the local part of the simulation box
+    own_s = empty_state(p.tau_start, lnx + 2, lny + 2, lnz + 2)
 
-# simulation loop
-nsteps = 100 # TODO: use the value from parameters
-for i in 1:nsteps
-    if rank == 0
-        print("$i of $nsteps\n")
+    own_s.phi[2:end-1, 2:end-1, 2:end-1] = own
+    own_s.phi_dot[2:end-1, 2:end-1, 2:end-1] = own
+    own_s.phi_dot_dot[2:end-1, 2:end-1, 2:end-1] = own
+    own_s.next_phi_dot_dot[2:end-1, 2:end-1, 2:end-1] = own
+
+    # setup for exchanging data with neighboring subboxes/nodes
+    own_subbox_index = grid.node_id_to_box_index[rank]
+
+    neighbors = Neighbor[]
+    for dim in 1:3
+        for side in (1, -1)
+            offset = [0, 0, 0]
+            offset[dim] = side
+
+            neighbor_index = mod1.(own_subbox_index .+ offset, grid.axis_lengths)
+            neighbor_id = grid.box_index_to_node_id[tuple(neighbor_index...)]
+
+
+            rcvbuf = Array{Float64}(undef,
+                                    length(get_receive_index(offset[1], lnx)),
+                                    length(get_receive_index(offset[2], lny)),
+                                    length(get_receive_index(offset[3], lnz)),)
+
+            neighbor = Neighbor(neighbor_id, tuple(offset...), rcvbuf)
+
+            push!(neighbors, neighbor)
+        end
     end
-    print("exchange data on node $rank\n")
+
+    requests = MPI.Request[]
+
+    s = MPIState(state = own_s,
+                 p = p,
+                 lnx = lnx,
+                 lny = lny,
+                 lnz = lnz,
+                 neighbors = neighbors,
+                 comm = comm,
+                 rank = rank,
+                 requests = requests,
+                )
+
+    MPI.Barrier(comm)
+    return s
+end
+
+function step_mpi!(s::MPIState)
+    if s.rank == 0
+        print("$(s.state.step) of $(s.p.nsteps)\n")
+    end
+    print("exchange data on node $(s.rank)\n")
     # exchange data with neighboring nodes/subboxes
-    for neighbor in neighbors
+    for neighbor in s.neighbors
         offx, offy, offz = neighbor.offset
         # slice of own data to send to neighbor
+        # TODO: do this for all required arrays
         to_send = @view own_subbox[
-            get_send_index(offx, lnx),
-            get_send_index(offy, lny),
-            get_send_index(offz, lnz),
+            get_send_index(offx, s.lnx),
+            get_send_index(offy, s.lny),
+            get_send_index(offz, s.lnz),
         ]
-        send = MPI.Isend(to_send, neighbor.rank, i, comm)
-        push!(requests, send)
+        send = MPI.Isend(to_send, neighbor.rank, s.state.step, s.comm)
+        push!(s.requests, send)
 
         # receive data from neighbor
-        receive = MPI.Irecv!(neighbor.receive_buffer, neighbor.rank, i, comm)
-        push!(requests, receive)
+        receive = MPI.Irecv!(neighbor.receive_buffer, neighbor.rank, s.state.step, s.comm)
+        push!(s.requests, receive)
     end
-    MPI.Waitall(requests)
+    MPI.Waitall(s.requests)
 
     # assign received data to own subbox
-    for neighbor in neighbors
+    for neighbor in s.neighbors
         offx, offy, offz = neighbor.offset
-        ix = get_receive_index(offx, lnx)
-        iy = get_receive_index(offy, lny)
-        iz = get_receive_index(offz, lnz)
+        ix = get_receive_index(offx, s.lnx)
+        iy = get_receive_index(offy, s.lny)
+        iz = get_receive_index(offz, s.lnz)
+        # TODO: do this for all required arrays
         own_subbox[ix, iy, iz] = neighbor.receive_buffer
     end
 
     # reuse the rquests list for next time
-    empty!(requests)
+    empty!(s.requests)
 
     print("local update on node $rank\n")
 
     # do local update
     # TODO: real update
-    for iz in 2:lnz
-        for iy in 2:lny
-            for ix in 2:lnx
-                own_subbox[ix, iy, iz] = (
-                   own_subbox[ix, iy, iz] +
-                   own_subbox[ix + 1, iy, iz] +
-                   own_subbox[ix - 1, iy, iz] +
-                   own_subbox[ix, iy + 1, iz] +
-                   own_subbox[ix, iy - 1, iz] +
-                   own_subbox[ix, iy, iz + 1] +
-                   own_subbox[ix, iy, iz - 1]
-                )
-            end
-        end
-    end
 
     # syncronise all nodes
-    MPI.Barrier(comm)
+    MPI.Barrier(s.comm)
 end
 
-# clean up
-MPI.Finalize()
-
-
+function finish_mpi!(s::MPIState)
+    # clean up
+    MPI.Finalize()
+end

@@ -8,6 +8,7 @@ using PyPlot
 using DelimitedFiles
 using Interpolations
 using Statistics
+using MPI
 
 Base.@kwdef struct Parameter
     # simulation domain in time in log units
@@ -82,7 +83,7 @@ function sim_params_from_physical_scale(log_end)
     return L, N
 end
 
-function init(;
+function init_parameter(;
         log_start,
         log_end,
         Delta_tau,
@@ -116,21 +117,24 @@ function init(;
         radius=radius,
    )
 
-   s = State(
-        tau=tau_start,
-        step=0,
-        psi=random_field(p),
-        psi_dot=random_field(p),
-        psi_dot_dot=new_field_array(p),
-        next_psi_dot_dot=new_field_array(p),
-   )
+    return p
+end
 
-   compute_force!(s.psi_dot_dot, s, p)
+function empty_state(tau_start, nx, ny, nz)
+    return State(
+                 tau = tau_start,
+                 step = 0,
+                 psi = Array{Float64}(undef, nx, ny, nz),
+                 psi_dot = Array{Float64}(undef, nx, ny, nz),
+                 psi_dot_dot = Array{Float64}(undef, nx, ny, nz),
+                 next_psi_dot_dot = Array{Float64}(undef,nx, ny, nz),
+                )
 
-   return s, p
 end
 
 include("propagation.jl")
+include("single_node.jl")
+include("mpi.jl")
 include("energy.jl")
 include("strings.jl")
 include("spectrum.jl")

@@ -4,7 +4,7 @@ using DelimitedFiles
 using Printf
 using JSON
 
-s, p = AxionStrings.init(;
+p = AxionStrings.init_parameter(;
     log_start = 2.0,
     log_end = 3.0,
     Delta_tau = 1e-2,
@@ -13,6 +13,8 @@ s, p = AxionStrings.init(;
     nbins = 20,
     radius = 1,
 )
+
+s = AxionStrings.init_state_single_node(p)
 
 write("parameter.json", json(p))
 
@@ -42,7 +44,7 @@ for i in 1:p.nsteps
         writedlm("spectrum1.dat", hcat(wavenumber, power))
         println("done")
     end
-    AxionStrings.make_step!(s, p)
+    AxionStrings.make_step_single_box!(s, p)
 end
 
 println("writing data files")
