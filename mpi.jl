@@ -1,5 +1,3 @@
-# mpirun -n 4 julia --project=. mpi.jl
-
 # splitting the grid into subboxes for each node such that the required communication
 # i.e. the sum of surfaces of each subbox is minimal
 # i.e. each subbox is as close to a cube as possible
@@ -119,6 +117,51 @@ Base.@kwdef mutable struct MPIState
     requests::Vector{MPI.Request}
 end
 
+struct FieldGenerator
+    plan :: PencilFFTPlan{Complex{Float64}, 3}
+    hat :: PencilArray{Complex{Float64}, 3}
+    global_hat :: GlobalPencilArray{Complex{Float64}, 3}
+    # plan :: PencilFFTPlan{Float64, 3}
+    # hat :: PencilArray{Float64, 3}
+    # global_hat :: GlobalPencilArray{Float64, 3}
+    ks :: Frequencies{Float64}
+end
+
+function FieldGenerator(pen :: Pencil, p :: Parameter)
+    # transform = Transforms.RFFT()
+    transform = Transforms.FFT()
+    plan = PencilFFTPlan(pen, transform)
+    hat = allocate_input(plan)
+    # ks = AbstractFFTs.rfftfreq(p.N, 1 / p.dx) .* (2*pi)
+    ks = AbstractFFTs.fftfreq(p.N, 1 / p.dx) .* (2*pi)
+    global_hat = global_view(hat)
+    return FieldGenerator(plan, hat, global_hat, ks)
+end
+
+function random_field_mpi(field_generator :: FieldGenerator, p :: Parameter)
+    @inbounds @simd for i in CartesianIndices(field_generator.global_hat)
+        ix, iy, iz = Tuple(i)
+        kx = field_generator.ks[ix]
+        ky = field_generator.ks[iy]
+        kz = field_generator.ks[iz]
+        k = sqrt(kx^2 + ky^2 + kz^2)
+        field_generator.global_hat[ix, iy, iz] =
+            # k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
+            complex(k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0)
+    end
+
+    field = allocate_output(field_generator.plan)
+
+    print("begin apply\n")
+    ldiv!(field, field_generator.plan, field_generator.hat)
+    print("end apply\n")
+
+    # normalize to the local mean
+    field ./= mean(abs, parent(field))
+
+    return field
+end
+
 function init_state_mpi(p::Parameter)
     # mpi setup
     MPI.Init()
@@ -129,19 +172,58 @@ function init_state_mpi(p::Parameter)
 
     # setup the grid (divide the simulation into subboxes for each node)
     global_grid_dimension = (p.N, p.N, p.N)
-    grid = distributed_grid(global_grid_dimension, nprocs)
+
+    # use PencilArrays to construct the grid
+    pen = Pencil(global_grid_dimension, comm)
+
+    # list of the number of subboxes per dimension
+    axis_lengths = tuple(1, size(topology(pen))...)
+
+    # list of index ranges for each node
+    remote_shapes = [range_remote(pen, i) for i in 1:nprocs]
+    # collect all possible index ranges per dimension
+    ranges_per_dimension = [sort(collect(Set(getindex.(remote_shapes, i))))
+     for i in 1:length(remote_shapes[1])]
+    # find the index of the index range (the index of the subbox) in each
+    # dimension for each node
+    remote_indicies = [[findfirst(rr -> r[dim] == rr, ranges_per_dimension[dim])
+                        for dim in 1:length(remote_shapes[1])]
+         for r in remote_shapes]
+
+    # map from the id of a node to its cartesian index in the subbox grid
+    node_id_to_box_index = Dict(zip(0:nprocs-1, remote_indicies))
+    # map from the cartesian index in the subbox grid to the id of the node
+    box_index_to_node_id = Dict(zip(remote_indicies, 0:nprocs-1))
+
+    # without PencilArrays:
+    # grid = distributed_grid(global_grid_dimension, nprocs)
 
     # subbox setup
     Random.seed!(p.seed * rank)
-    lnx, lny, lnz = grid.node_id_to_box_size[rank]
+    lnx, lny, lnz = size_local(pen)
 
     # setup the local part of the simulation box
-    own_s = empty_state(p.tau_start, lnx + 2, lny + 2, lnz + 2)
+    field_generator = FieldGenerator(pen, p)
 
-    own_s.phi[2:end-1, 2:end-1, 2:end-1] = own
-    own_s.phi_dot[2:end-1, 2:end-1, 2:end-1] = own
-    own_s.phi_dot_dot[2:end-1, 2:end-1, 2:end-1] = own
-    own_s.next_phi_dot_dot[2:end-1, 2:end-1, 2:end-1] = own
+    # generate random psi and psi_dot
+    pen_psi = random_field_mpi(field_generator, p)
+    pen_psi_dot = random_field_mpi(field_generator, p)
+
+    field_generator = nothing # release field generator memory to gc
+
+    # assign them to arrays with a boarder
+    psi = Array{Float64}(undef, lnx + 2, lny + 2, lnz + 2)
+    psi[2:end-1, 2:end-1, 2:end-1] = parent(pen_psi)
+    pen_psi = nothing
+
+    psi_dot = Array{Float64}(undef, lnx + 2, lny + 2, lnz + 2)
+    psi_dot[2:end-1, 2:end-1, 2:end-1] = parent(pen_psi_dot)
+    pen_psi_dot = nothing
+
+    # construct local state object
+    own_s = State(p.tau_start, 0, psi, psi_dot,
+                  Array{Float64}(undef, lnx, lny, lnz),
+                  Array{Float64}(undef, lnx, lny, lnz),)
 
     # setup for exchanging data with neighboring subboxes/nodes
     own_subbox_index = grid.node_id_to_box_index[rank]
@@ -153,8 +235,7 @@ function init_state_mpi(p::Parameter)
             offset[dim] = side
 
             neighbor_index = mod1.(own_subbox_index .+ offset, grid.axis_lengths)
-            neighbor_id = grid.box_index_to_node_id[tuple(neighbor_index...)]
-
+            neighbor_id = grid.box_index_to_node_id[neighbor_index]
 
             rcvbuf = Array{Float64}(undef,
                                     length(get_receive_index(offset[1], lnx)),

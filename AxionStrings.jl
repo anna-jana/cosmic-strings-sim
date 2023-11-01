@@ -9,6 +9,9 @@ using DelimitedFiles
 using Interpolations
 using Statistics
 using MPI
+using PencilArrays
+using PencilFFTs
+using AbstractFFTs
 
 Base.@kwdef struct Parameter
     # simulation domain in time in log units
@@ -55,28 +58,6 @@ tau_to_log(tau) = H_to_log(t_to_H(tau_to_t(tau)))
 
 const field_max = 1 / sqrt(2)
 
-function new_field_array(p :: Parameter)
-    return Array{Float64, 3}(undef, (p.N, p.N, p.N))
-end
-
-function random_field(p :: Parameter)
-    hat = new_field_array(p)
-    ks = fftfreq(p.N, 1 / p.dx) .* (2*pi)
-    @inbounds for iz in 1:p.N
-        @inbounds for iy in 1:p.N
-            @inbounds @simd for ix in 1:p.N
-                kx = ks[ix]
-                ky = ks[iy]
-                kz = ks[iz]
-                k = sqrt(kx^2 + ky^2 + kz^2)
-                hat[ix, iy, iz] = k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
-            end
-        end
-    end
-    field = ifft(hat)
-    return field ./ mean(abs.(field))
-end
-
 function sim_params_from_physical_scale(log_end)
     L = 1 / log_to_H(log_end)
     N = ceil(Int, L * tau_to_a(log_to_tau(log_end)))
@@ -118,18 +99,6 @@ function init_parameter(;
    )
 
     return p
-end
-
-function empty_state(tau_start, nx, ny, nz)
-    return State(
-                 tau = tau_start,
-                 step = 0,
-                 psi = Array{Float64}(undef, nx, ny, nz),
-                 psi_dot = Array{Float64}(undef, nx, ny, nz),
-                 psi_dot_dot = Array{Float64}(undef, nx, ny, nz),
-                 next_psi_dot_dot = Array{Float64}(undef,nx, ny, nz),
-                )
-
 end
 
 include("propagation.jl")

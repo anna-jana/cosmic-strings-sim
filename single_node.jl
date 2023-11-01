@@ -1,16 +1,19 @@
-function init_state_single_node(p::Parameter)
-   s = State(
-        tau=p.tau_start,
-        step=0,
-        psi=random_field(p),
-        psi_dot=random_field(p),
-        psi_dot_dot=new_field_array(p),
-        next_psi_dot_dot=new_field_array(p),
-   )
-
-   compute_force_single_node!(s.psi_dot_dot, s, p)
-
-   return s
+function random_field_single_node(p :: Parameter)
+    hat = Array{Float64, 3}(undef, (p.N, p.N, p.N))
+    ks = FFTW.fftfreq(p.N, 1 / p.dx) .* (2*pi)
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds @simd for ix in 1:p.N
+                kx = ks[ix]
+                ky = ks[iy]
+                kz = ks[iz]
+                k = sqrt(kx^2 + ky^2 + kz^2)
+                hat[ix, iy, iz] = k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
+            end
+        end
+    end
+    field = FFTW.ifft(hat)
+    return field ./ mean(abs.(field))
 end
 
 function compute_force_single_node!(out :: Array{Complex{Float64}, 3},
@@ -33,5 +36,20 @@ function compute_force_single_node!(out :: Array{Complex{Float64}, 3},
             end
         end
     end
+end
+
+function init_state_single_node(p::Parameter)
+   s = State(
+        tau=p.tau_start,
+        step=0,
+        psi = random_field_single_node(p),
+        psi_dot = random_field_single_node(p),
+        psi_dot_dot = Array{Float64, 3}(undef, (p.N, p.N, p.N)),
+        next_psi_dot_dot = Array{Float64, 3}(undef, (p.N, p.N, p.N)),
+   )
+
+   compute_force_single_node!(s.psi_dot_dot, s, p)
+
+   return s
 end
 
