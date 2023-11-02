@@ -1,78 +1,5 @@
-# splitting the grid into subboxes for each node such that the required communication
-# i.e. the sum of surfaces of each subbox is minimal
-# i.e. each subbox is as close to a cube as possible
-function primes_to(n)
-    primes = collect(2:n)
-    i = 1
-    while i <= length(primes)
-        p = primes[i]
-        j = i + 1
-        while j <= length(primes)
-            if primes[j] % p == 0
-                deleteat!(primes, j)
-            else
-                j += 1
-            end
-        i += 1
-        end
-    end
-    return primes
-end
-
-function prime_factors(n)
-    primes = primes_to(n)
-    factors = Int[]
-    while n != 1
-        for p in primes
-            if n % p == 0
-                push!(factors, p)
-                n = div(n, p)
-                break
-            end
-        end
-    end
-    return factors
-end
-
-function most_equal_products(factors, n)
-    products = ones(Int, n)
-    factors = sort(factors)
-    i = 1
-    for f in factors
-        products[i] *= f
-        i = mod1(i + 1, n)
-    end
-    return products
-end
-
-function split_grid_points_into_boxes(num_grid_points, num_boxes)
-    box_sizes = fill(div(num_grid_points, num_boxes), num_boxes)
-    for i in 1:num_grid_points % num_boxes
-        box_sizes[i] += 1
-    end
-    return box_sizes
-end
-
-function get_node_boxes_sizes(grid_dimension, num_nodes)
-    box_axis_lengths = most_equal_products(prime_factors(num_nodes),
-                                           length(grid_dimension))
-    return [split_grid_points_into_boxes(grid_axis_length, box_axis_length)
-            for (grid_axis_length, box_axis_length)
-            in zip(grid_dimension, box_axis_lengths)]
-end
-
-function distributed_grid(grid_dimension, num_nodes)
-    boxes = get_node_boxes_sizes(grid_dimension, num_nodes)
-    axis_lengths = map(length, boxes)
-    zip_rank(xs) = zip(0:length(xs)-1, xs)
-    node_id_to_box_size = Dict(zip_rank(Iterators.product(boxes...)))
-    node_id_to_box_index = Dict(zip_rank(Iterators.product(
-                                 map(b -> 1:length(b), boxes)...)))
-    box_index_to_node_id = Dict([box_index => node_id
-                                 for (node_id, box_index) in node_id_to_box_index])
-    return (; boxes, axis_lengths, node_id_to_box_size, node_id_to_box_index, box_index_to_node_id)
-end
-
+# get the index used to get data from to send to node with
+# neighboring subbox
 function get_send_index(off, ln)
     if off == -1
         return 2
@@ -86,6 +13,8 @@ function get_send_index(off, ln)
     end
 end
 
+# get the index used to assign data received from node with
+# neighboring subbox
 function get_receive_index(off, ln)
     if off == -1
         return 1
@@ -99,15 +28,20 @@ function get_receive_index(off, ln)
     end
 end
 
+# infos about neighboring subbox
 struct Neighbor
     rank::Int
-    offset::Tuple{Int, Int, Int}
-    receive_buffer::Array{Float64, 3}
+    offset::Tuple{Int,Int,Int}
+    receive_buffer::Array{Float64,3}
 end
 
-Base.@kwdef mutable struct MPIState
-    state::State
-    p::Parameter
+Base.@kwdef mutable struct MPIState <: AbstractState
+    tau::Float64
+    step::Int
+    psi::Array{Complex{Float64}, 3}
+    psi_dot::Array{Complex{Float64}, 3}
+    psi_dot_dot::Array{Complex{Float64}, 3}
+    next_psi_dot_dot::Array{Complex{Float64}, 3}
     lnx::Int
     lny::Int
     lnz::Int
@@ -118,27 +52,27 @@ Base.@kwdef mutable struct MPIState
 end
 
 struct FieldGenerator
-    plan :: PencilFFTPlan{Complex{Float64}, 3}
-    hat :: PencilArray{Complex{Float64}, 3}
-    global_hat :: GlobalPencilArray{Complex{Float64}, 3}
+    plan::PencilFFTPlan{Complex{Float64},3}
+    hat::PencilArray{Complex{Float64},3}
+    global_hat::GlobalPencilArray{Complex{Float64},3}
     # plan :: PencilFFTPlan{Float64, 3}
     # hat :: PencilArray{Float64, 3}
     # global_hat :: GlobalPencilArray{Float64, 3}
-    ks :: Frequencies{Float64}
+    ks::Frequencies{Float64}
 end
 
-function FieldGenerator(pen :: Pencil, p :: Parameter)
+function FieldGenerator(pen::Pencil, p::Parameter)
     # transform = Transforms.RFFT()
     transform = Transforms.FFT()
     plan = PencilFFTPlan(pen, transform)
     hat = allocate_output(plan)
     # ks = AbstractFFTs.rfftfreq(p.N, 1 / p.dx) .* (2*pi)
-    ks = AbstractFFTs.fftfreq(p.N, 1 / p.dx) .* (2*pi)
+    ks = AbstractFFTs.fftfreq(p.N, 1 / p.dx) .* (2 * pi)
     global_hat = global_view(hat)
     return FieldGenerator(plan, hat, global_hat, ks)
 end
 
-function random_field_mpi(field_generator :: FieldGenerator, p :: Parameter)
+function random_field_mpi(field_generator::FieldGenerator, p::Parameter)
     @inbounds @simd for i in CartesianIndices(field_generator.global_hat)
         ix, iy, iz = Tuple(i)
         kx = field_generator.ks[ix]
@@ -146,8 +80,8 @@ function random_field_mpi(field_generator :: FieldGenerator, p :: Parameter)
         kz = field_generator.ks[iz]
         k = sqrt(kx^2 + ky^2 + kz^2)
         field_generator.global_hat[ix, iy, iz] =
-            # k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
-            complex(k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0)
+        # k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
+            complex(k <= p.k_max ? (rand() * 2 - 1) * field_max : 0.0)
     end
 
     field = allocate_input(field_generator.plan)
@@ -160,7 +94,7 @@ function random_field_mpi(field_generator :: FieldGenerator, p :: Parameter)
     return field
 end
 
-function init_state_mpi(p::Parameter)
+function MPIState(p::Parameter)
     # mpi setup
     MPI.Init()
     comm = MPI.COMM_WORLD
@@ -172,6 +106,19 @@ function init_state_mpi(p::Parameter)
     global_grid_dimension = (p.N, p.N, p.N)
 
     # use PencilArrays to construct the grid
+    # Normally splitting the grid into subboxes for each node
+    # such that the required communication is minimal is best.
+    # That means than i.e. the sum of surfaces of each subbox is minimal
+    # i.e. each subbox is as close to a cube as possible.
+    # However we also need to take ffts for initalisation and spectrum
+    # computation. The Pencil FFT lib only supports pencil configurations
+    # i.e. decompositions where the first dimension is not divided, as this
+    # is the optimal decomposition for ffts.
+    # We need to see if this works for us. If not, we need to find a way to take
+    # ffts on a cube decomposition. Either this means that we need to
+    # find a different mpi fft library which supports this kind of decomposition
+    # or we need to redistribute the data before/after ffts.
+    # The later is propbably expensive and complicated.
     pen = Pencil(global_grid_dimension, comm)
 
     # list of the number of subboxes per dimension
@@ -181,12 +128,12 @@ function init_state_mpi(p::Parameter)
     remote_shapes = [range_remote(pen, i) for i in 1:nprocs]
     # collect all possible index ranges per dimension
     ranges_per_dimension = [sort(collect(Set(getindex.(remote_shapes, i))))
-     for i in 1:length(remote_shapes[1])]
+                            for i in 1:length(remote_shapes[1])]
     # find the index of the index range (the index of the subbox) in each
     # dimension for each node
     remote_indicies = [[findfirst(rr -> r[dim] == rr, ranges_per_dimension[dim])
                         for dim in 1:length(remote_shapes[1])]
-         for r in remote_shapes]
+                       for r in remote_shapes]
 
     # map from the id of a node to its cartesian index in the subbox grid
     node_id_to_box_index = Dict(zip(0:nprocs-1, remote_indicies))
@@ -218,11 +165,6 @@ function init_state_mpi(p::Parameter)
     psi_dot[2:end-1, 2:end-1, 2:end-1] = parent(pen_psi_dot)
     pen_psi_dot = nothing
 
-    # construct local state object
-    own_s = State(p.tau_start, 0, psi, psi_dot,
-                  Array{Complex{Float64}}(undef, lnx, lny, lnz),
-                  Array{Complex{Float64}}(undef, lnx, lny, lnz),)
-
     # setup for exchanging data with neighboring subboxes/nodes
     own_subbox_index = node_id_to_box_index[rank]
 
@@ -237,9 +179,9 @@ function init_state_mpi(p::Parameter)
             neighbor_id = box_index_to_node_id[neighbor_index]
 
             rcvbuf = Array{Float64}(undef,
-                                    length(get_receive_index(offset[1], lnx)),
-                                    length(get_receive_index(offset[2], lny)),
-                                    length(get_receive_index(offset[3], lnz)),)
+                length(get_receive_index(offset[1], lnx)),
+                length(get_receive_index(offset[2], lny)),
+                length(get_receive_index(offset[3], lnz)),)
 
             neighbor = Neighbor(neighbor_id, tuple(offset...), rcvbuf)
 
@@ -249,69 +191,155 @@ function init_state_mpi(p::Parameter)
 
     requests = MPI.Request[]
 
-    s = MPIState(state = own_s,
-                 p = p,
-                 lnx = lnx,
-                 lny = lny,
-                 lnz = lnz,
-                 neighbors = neighbors,
-                 comm = comm,
-                 rank = rank,
-                 requests = requests,
-                )
+    s = MPIState(
+        tau=p.tau_start,
+        step=0,
+        psi=psi,
+        psi_dot=psi_dot,
+        psi_dot_dot=Array{Complex{Float64}}(undef, lnx, lny, lnz),
+        next_psi_dot_dot=Array{Complex{Float64}}(undef, lnx, lny, lnz),
+        lnx=lnx,
+        lny=lny,
+        lnz=lnz,
+        neighbors=neighbors,
+        comm=comm,
+        rank=rank,
+        requests=requests,
+    )
+    if rank == 0
+        println("compute force\n")
+    end
+
+    compute_force!(s.psi_dot_dot, s, p)
 
     print("end setup on rank $rank\n")
     MPI.Barrier(comm)
+
     return s
 end
 
-function step_mpi!(s::MPIState)
-    if s.rank == 0
-        print("$(s.state.step) of $(s.p.nsteps)\n")
-    end
-    print("exchange data on node $(s.rank)\n")
+@inline function get_update_domain(_s::MPIState, A::Array{Complex{Float64}, 3})
+    _s # ignore
+    return @view A[2:end-1, 2:end-1, 2:end-1]
+end
+
+function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Parameter)
+    rank = s.rank
     # exchange data with neighboring nodes/subboxes
+    # we need to exchange the psi field as we need to compute its
+    # laplacian for tim propagation
+    if rank == 0
+        print("start communication\n")
+    end
     for neighbor in s.neighbors
         offx, offy, offz = neighbor.offset
-        # slice of own data to send to neighbor
-        # TODO: do this for all required arrays
-        to_send = @view own_subbox[
-            get_send_index(offx, s.lnx),
-            get_send_index(offy, s.lny),
-            get_send_index(offz, s.lnz),
-        ]
-        send = MPI.Isend(to_send, neighbor.rank, s.state.step, s.comm)
-        push!(s.requests, send)
+        if neighbor.rank == s.rank
+            # no need for communication -> copy memory directly
+            if rank == 0
+                print("no communicating\n")
+            end
+        else
+            if rank == 0
+                print("creating send\n")
+            end
+            # slice of own data to send to neighbor
+            to_send = @view s.psi[
+                get_send_index(offx, s.lnx),
+                get_send_index(offy, s.lny),
+                get_send_index(offz, s.lnz),
+            ]
+            send = MPI.Isend(to_send, neighbor.rank, s.step, s.comm)
+            push!(s.requests, send)
+            if rank == 0
+                print("send done\n")
+            end
 
-        # receive data from neighbor
-        receive = MPI.Irecv!(neighbor.receive_buffer, neighbor.rank, s.state.step, s.comm)
-        push!(s.requests, receive)
+            # receive data from neighbor
+            if rank == 0
+                print("creating receive\n")
+            end
+            receive = MPI.Irecv!(neighbor.receive_buffer,
+                                 neighbor.rank,
+                                 s.step,
+                                 s.comm)
+            push!(s.requests, receive)
+            if rank == 0
+                print("receive done\n")
+            end
+        end
+    end
+    if rank == 0
+        print("waiting\n")
     end
     MPI.Waitall(s.requests)
+    if rank == 0
+        print("communication done\n")
+    end
 
     # assign received data to own subbox
+    if rank == 0
+        print("start copy\n")
+    end
     for neighbor in s.neighbors
         offx, offy, offz = neighbor.offset
         ix = get_receive_index(offx, s.lnx)
         iy = get_receive_index(offy, s.lny)
         iz = get_receive_index(offz, s.lnz)
-        # TODO: do this for all required arrays
-        own_subbox[ix, iy, iz] = neighbor.receive_buffer
+        if neighbor.rank == s.rank
+            s.psi[ix, iy, iz] = @view s.psi[
+                get_send_index(offx, s.lnx),
+                get_send_index(offy, s.lny),
+                get_send_index(offz, s.lnz),
+            ]
+        else
+            s.psi[ix, iy, iz] = neighbor.receive_buffer
+        end
     end
+    if rank == 0
+        print("end copy\n")
+    endinit_state_mpi
 
     # reuse the rquests list for next time
     empty!(s.requests)
 
-    print("local update on node $rank\n")
-
-    # do local update
-    # TODO: real update
+    a = tau_to_a(s.tau)
+    @inbounds for iz in 2:s.lnz
+        for iy in 2:s.lny
+            @simd for ix in 2:s.lnx
+                psi = s.psi[ix, iy, iz]
+                left = s.psi[ix + 1, iy, iz]
+                right = s.psi[ix - 1, iy, iz]
+                front = s.psi[ix, iy + 1, iz]
+                back = s.psi[ix, iy - 1, iz]
+                top = s.psi[ix, iy, iz + 1]
+                bottom = s.psi[ix, iy, iz - 1]
+                out[ix, iy, iz] = force_stecil(
+                    psi, left, right, front, back, top, bottom, a, p)
+            end
+        end
+    end
 
     # syncronise all nodes
     MPI.Barrier(s.comm)
 end
 
-function finish_mpi!(s::MPIState)
+function step_mpi!(s::MPIState, p::Parameter)
+    if s.rank == 0
+        print("$(s.step) of $(p.nsteps)\n")
+    end
+    print("exchange data on node $(s.rank)\n")
+
+    # do local update
+    print("local update on node $rank\n")
+    make_step!(s, p)
+    print("end frame $(s.step) on rank $(s.rank)\n")
+
+    # syncronise all nodes
+    MPI.Barrier(s.comm)
+end
+
+function finish_mpi!(_s::MPIState)
+    _s # ignore
     # clean up
     MPI.Finalize()
 end

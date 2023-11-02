@@ -1,4 +1,4 @@
-function compute_energy(s :: State, p :: Parameter)
+function compute_energy(s :: AbstractState, p :: Parameter)
     a = tau_to_a(s.tau)
     H = t_to_H(tau_to_t(s.tau))
     theta = angle.(s.psi)

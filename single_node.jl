@@ -1,23 +1,14 @@
-function random_field_single_node(p :: Parameter)
-    hat = Array{Float64, 3}(undef, (p.N, p.N, p.N))
-    ks = FFTW.fftfreq(p.N, 1 / p.dx) .* (2*pi)
-    @inbounds for iz in 1:p.N
-        @inbounds for iy in 1:p.N
-            @inbounds @simd for ix in 1:p.N
-                kx = ks[ix]
-                ky = ks[iy]
-                kz = ks[iz]
-                k = sqrt(kx^2 + ky^2 + kz^2)
-                hat[ix, iy, iz] = k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
-            end
-        end
-    end
-    field = FFTW.ifft(hat)
-    return field ./ mean(abs.(field))
+Base.@kwdef mutable struct SingleNodeState <: AbstractState
+    tau::Float64
+    step::Int
+    psi::Array{Complex{Float64}, 3}
+    psi_dot::Array{Complex{Float64}, 3}
+    psi_dot_dot::Array{Complex{Float64}, 3}
+    next_psi_dot_dot::Array{Complex{Float64}, 3}
 end
 
-function compute_force_single_node!(out :: Array{Complex{Float64}, 3},
-                                    s :: State, p :: Parameter)
+function compute_force!(out::Array{Complex{Float64},3},
+                        s::SingleNodeState, p::Parameter)
     a = tau_to_a(s.tau)
     Threads.@threads for iz in 1:p.N
         for iy in 1:p.N
@@ -31,25 +22,47 @@ function compute_force_single_node!(out :: Array{Complex{Float64}, 3},
                     top = s.psi[ix, iy, mod1(iz + 1, p.N)]
                     bottom = s.psi[ix, iy, mod1(iz - 1, p.N)]
                     out[ix, iy, iz] = force_stecil(
-                          psi, left, right, front, back, top, bottom, a, p)
+                        psi, left, right, front, back, top, bottom, a, p)
                 end
             end
         end
     end
 end
 
-function init_state_single_node(p::Parameter)
-   s = State(
+function random_field_single_node(p::Parameter)
+    hat = Array{Float64,3}(undef, (p.N, p.N, p.N))
+    ks = FFTW.fftfreq(p.N, 1 / p.dx) .* (2 * pi)
+    @inbounds for iz in 1:p.N
+        @inbounds for iy in 1:p.N
+            @inbounds @simd for ix in 1:p.N
+                kx = ks[ix]
+                ky = ks[iy]
+                kz = ks[iz]
+                k = sqrt(kx^2 + ky^2 + kz^2)
+                hat[ix, iy, iz] = k <= p.k_max ? (rand() * 2 - 1) * field_max : 0.0
+            end
+        end
+    end
+    field = FFTW.ifft(hat)
+    return field ./ mean(abs.(field))
+end
+
+function SingleNodeState(p::Parameter)
+    s = SingleNodeState(
         tau=p.tau_start,
         step=0,
-        psi = random_field_single_node(p),
-        psi_dot = random_field_single_node(p),
-        psi_dot_dot = Array{Float64, 3}(undef, (p.N, p.N, p.N)),
-        next_psi_dot_dot = Array{Float64, 3}(undef, (p.N, p.N, p.N)),
-   )
+        psi=random_field_single_node(p),
+        psi_dot=random_field_single_node(p),
+        psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
+        next_psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
+    )
 
-   compute_force_single_node!(s.psi_dot_dot, s, p)
+    compute_force!(s.psi_dot_dot, s, p)
 
-   return s
+    return s
+end
+
+@inline function get_update_domain(__s::SingleNodeState, A::Array{Complex{Float64}, 3})
+    return A
 end
 

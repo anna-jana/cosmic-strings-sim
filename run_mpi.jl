@@ -2,14 +2,9 @@
 
 include("AxionStrings.jl")
 
-p = AxionStrings.init_parameter(
-    log_start = 2.0,
-    log_end = 3.0,
-    Delta_tau = 1e-2,
-    seed = 42,
-    k_max = 1.0,
-    nbins = 20,
-    radius = 1
-)
+p = AxionStrings.Parameter(2.0, 3.0, 1e-2, 42, 1.0, 20, 1)
+s = AxionStrings.MPIState(p)
 
-s = AxionStrings.init_state_mpi(p)
+AxionStrings.finish_mpi!(s)
+
+

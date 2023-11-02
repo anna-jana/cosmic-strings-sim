@@ -36,14 +36,7 @@ Base.@kwdef struct Parameter
     radius :: Int
 end
 
-Base.@kwdef mutable struct State
-    tau :: Float64
-    step :: Int
-    psi :: Array{Complex{Float64}, 3}
-    psi_dot :: Array{Complex{Float64}, 3}
-    psi_dot_dot :: Array{Complex{Float64}, 3}
-    next_psi_dot_dot :: Array{Complex{Float64}, 3}
-end
+abstract type AbstractState end
 
 log_to_H(l) = 1.0 / exp(l)
 H_to_t(H) = 1 / (2*H)
@@ -64,15 +57,7 @@ function sim_params_from_physical_scale(log_end)
     return L, N
 end
 
-function init_parameter(;
-        log_start,
-        log_end,
-        Delta_tau,
-        seed,
-        k_max,
-        nbins,
-        radius,
-    )
+function Parameter(log_start, log_end, Delta_tau, seed, k_max, nbins, radius)
     Random.seed!(seed)
 
     L, N = sim_params_from_physical_scale(log_end)

@@ -30,7 +30,7 @@ end
 
 # compute PPSE (pseudo-power-spectrum-estimator) of the theta-dot field
 # -> the spectrum of number denseties of axtion
-function compute_spectrum(p :: Parameter, s :: State, strings :: Vector{Vector{SVector{3, Float64}}})
+function compute_spectrum(p :: Parameter, s :: AbstractState, strings :: Vector{Vector{SVector{3, Float64}}})
     a = tau_to_a(s.tau)
     theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
 

@@ -34,7 +34,7 @@ end
 
 # TODO; reverse loop order
 
-function detect_strings(s :: State, p :: Parameter)
+function detect_strings(s :: AbstractState, p :: Parameter)
     string_points = Set{SVector{3, Float64}}()
     @inbounds for iz in 1:p.N
         @inbounds for iy in 1:p.N
@@ -87,7 +87,7 @@ function detect_strings(s :: State, p :: Parameter)
     return strings
 end
 
-function total_string_length(s::State, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
+function total_string_length(s::AbstractState, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
     a = tau_to_a(s.tau)
     t = tau_to_t(s.tau)
     l = p.dx * sum(strings) do s

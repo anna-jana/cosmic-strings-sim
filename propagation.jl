@@ -5,24 +5,29 @@
     return + laplace - pot_force
 end
 
-function make_step_single_box!(s :: State, p :: Parameter)
+function make_step!(s::AbstractState, p::Parameter)
     # propagate PDE using velocity verlet algorithm
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
     s.step += 1
 
+    # get range of the arrays to be updated
+    update_psi = get_update_domain(s, s.psi)
+    update_psi_dot = get_update_domain(s, s.psi_dot)
+
     # update the field ("position")
-    Threads.@threads for i in eachindex(s.psi)
-        @inbounds s.psi[i] += p.Delta_tau*s.psi_dot[i] +
-                              0.5*p.Delta_tau^2*s.psi_dot_dot[i]
+    Threads.@threads for i in eachindex(update_psi)
+        @inbounds update_psi[i] += p.Delta_tau*update_psi_dot[i] + 0.5*p.Delta_tau^2*s.psi_dot_dot[i]
     end
 
     # update the field derivative ("velocity")
-    compute_force_single_node!(s.next_psi_dot_dot, s, p)
+    compute_force!(s.next_psi_dot_dot, s, p)
 
-    Threads.@threads for i in eachindex(s.psi_dot)
-        @inbounds s.psi_dot[i] += p.Delta_tau*0.5*(s.psi_dot_dot[i] + s.next_psi_dot_dot[i])
+    Threads.@threads for i in eachindex(update_psi_dot)
+        @inbounds update_psi_dot[i] += p.Delta_tau*0.5*(s.psi_dot_dot[i] + s.next_psi_dot_dot[i])
     end
 
     # swap current and next arrays
     (s.psi_dot_dot, s.next_psi_dot_dot) = (s.next_psi_dot_dot, s.psi_dot_dot)
+
 end
+
