@@ -32,7 +32,7 @@ end
 struct Neighbor
     rank::Int
     offset::Tuple{Int,Int,Int}
-    receive_buffer::Array{Float64,3}
+    receive_buffer::Array{Complex{Float64}, 3}
 end
 
 Base.@kwdef mutable struct MPIState <: AbstractState
@@ -52,9 +52,9 @@ Base.@kwdef mutable struct MPIState <: AbstractState
 end
 
 struct FieldGenerator
-    plan::PencilFFTPlan{Complex{Float64},3}
-    hat::PencilArray{Complex{Float64},3}
-    global_hat::GlobalPencilArray{Complex{Float64},3}
+    plan::PencilFFTPlan{Complex{Float64}, 3}
+    hat::PencilArray{Complex{Float64}, 3}
+    global_hat::GlobalPencilArray{Complex{Float64}, 3}
     # plan :: PencilFFTPlan{Float64, 3}
     # hat :: PencilArray{Float64, 3}
     # global_hat :: GlobalPencilArray{Float64, 3}
@@ -123,6 +123,10 @@ function MPIState(p::Parameter)
 
     # list of the number of subboxes per dimension
     axis_lengths = tuple(1, size(topology(pen))...)
+    if rank == 0
+        println(pen)
+        println(topology(pen))
+    end
 
     # list of index ranges for each node
     remote_shapes = [range_remote(pen, i) for i in 1:nprocs]
@@ -206,14 +210,12 @@ function MPIState(p::Parameter)
         rank=rank,
         requests=requests,
     )
-    if rank == 0
-        println("compute force\n")
-    end
+
+    MPI.Barrier(comm)
 
     compute_force!(s.psi_dot_dot, s, p)
 
     print("end setup on rank $rank\n")
-    MPI.Barrier(comm)
 
     return s
 end
@@ -224,62 +226,35 @@ end
 end
 
 function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Parameter)
-    rank = s.rank
     # exchange data with neighboring nodes/subboxes
     # we need to exchange the psi field as we need to compute its
-    # laplacian for tim propagation
-    if rank == 0
-        print("start communication\n")
-    end
+    # laplacian for time propagation
+
     for neighbor in s.neighbors
-        offx, offy, offz = neighbor.offset
         if neighbor.rank == s.rank
             # no need for communication -> copy memory directly
-            if rank == 0
-                print("no communicating\n")
-            end
         else
-            if rank == 0
-                print("creating send\n")
-            end
+            # receive data from neighbor
+            receive = MPI.Irecv!(neighbor.receive_buffer,
+                                 s.comm;
+                                 source=neighbor.rank,
+                                 tag=neighbor.rank)
+            push!(s.requests, receive)
+
             # slice of own data to send to neighbor
+            offx, offy, offz = neighbor.offset
             to_send = @view s.psi[
                 get_send_index(offx, s.lnx),
                 get_send_index(offy, s.lny),
                 get_send_index(offz, s.lnz),
             ]
-            send = MPI.Isend(to_send, neighbor.rank, s.step, s.comm)
+            send = MPI.Isend(to_send, s.comm; dest=neighbor.rank, tag=s.rank)
             push!(s.requests, send)
-            if rank == 0
-                print("send done\n")
-            end
-
-            # receive data from neighbor
-            if rank == 0
-                print("creating receive\n")
-            end
-            receive = MPI.Irecv!(neighbor.receive_buffer,
-                                 neighbor.rank,
-                                 s.step,
-                                 s.comm)
-            push!(s.requests, receive)
-            if rank == 0
-                print("receive done\n")
-            end
         end
     end
-    if rank == 0
-        print("waiting\n")
-    end
     MPI.Waitall(s.requests)
-    if rank == 0
-        print("communication done\n")
-    end
 
     # assign received data to own subbox
-    if rank == 0
-        print("start copy\n")
-    end
     for neighbor in s.neighbors
         offx, offy, offz = neighbor.offset
         ix = get_receive_index(offx, s.lnx)
@@ -295,9 +270,6 @@ function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Paramet
             s.psi[ix, iy, iz] = neighbor.receive_buffer
         end
     end
-    if rank == 0
-        print("end copy\n")
-    endinit_state_mpi
 
     # reuse the rquests list for next time
     empty!(s.requests)
