@@ -131,7 +131,7 @@ function FieldGenerator(pen :: Pencil, p :: Parameter)
     # transform = Transforms.RFFT()
     transform = Transforms.FFT()
     plan = PencilFFTPlan(pen, transform)
-    hat = allocate_input(plan)
+    hat = allocate_output(plan)
     # ks = AbstractFFTs.rfftfreq(p.N, 1 / p.dx) .* (2*pi)
     ks = AbstractFFTs.fftfreq(p.N, 1 / p.dx) .* (2*pi)
     global_hat = global_view(hat)
@@ -150,11 +150,9 @@ function random_field_mpi(field_generator :: FieldGenerator, p :: Parameter)
             complex(k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0)
     end
 
-    field = allocate_output(field_generator.plan)
+    field = allocate_input(field_generator.plan)
 
-    print("begin apply\n")
     ldiv!(field, field_generator.plan, field_generator.hat)
-    print("end apply\n")
 
     # normalize to the local mean
     field ./= mean(abs, parent(field))
@@ -212,30 +210,31 @@ function init_state_mpi(p::Parameter)
     field_generator = nothing # release field generator memory to gc
 
     # assign them to arrays with a boarder
-    psi = Array{Float64}(undef, lnx + 2, lny + 2, lnz + 2)
+    psi = Array{Complex{Float64}}(undef, lnx + 2, lny + 2, lnz + 2)
     psi[2:end-1, 2:end-1, 2:end-1] = parent(pen_psi)
     pen_psi = nothing
 
-    psi_dot = Array{Float64}(undef, lnx + 2, lny + 2, lnz + 2)
+    psi_dot = Array{Complex{Float64}}(undef, lnx + 2, lny + 2, lnz + 2)
     psi_dot[2:end-1, 2:end-1, 2:end-1] = parent(pen_psi_dot)
     pen_psi_dot = nothing
 
     # construct local state object
     own_s = State(p.tau_start, 0, psi, psi_dot,
-                  Array{Float64}(undef, lnx, lny, lnz),
-                  Array{Float64}(undef, lnx, lny, lnz),)
+                  Array{Complex{Float64}}(undef, lnx, lny, lnz),
+                  Array{Complex{Float64}}(undef, lnx, lny, lnz),)
 
     # setup for exchanging data with neighboring subboxes/nodes
-    own_subbox_index = grid.node_id_to_box_index[rank]
+    own_subbox_index = node_id_to_box_index[rank]
 
+    # find all neighbors of our subbox and the ranks they belong to
     neighbors = Neighbor[]
     for dim in 1:3
         for side in (1, -1)
             offset = [0, 0, 0]
             offset[dim] = side
 
-            neighbor_index = mod1.(own_subbox_index .+ offset, grid.axis_lengths)
-            neighbor_id = grid.box_index_to_node_id[neighbor_index]
+            neighbor_index = mod1.(own_subbox_index .+ offset, axis_lengths)
+            neighbor_id = box_index_to_node_id[neighbor_index]
 
             rcvbuf = Array{Float64}(undef,
                                     length(get_receive_index(offset[1], lnx)),
@@ -261,6 +260,7 @@ function init_state_mpi(p::Parameter)
                  requests = requests,
                 )
 
+    print("end setup on rank $rank\n")
     MPI.Barrier(comm)
     return s
 end
