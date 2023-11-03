@@ -45,10 +45,12 @@ Base.@kwdef mutable struct MPIState <: AbstractState
     lnx::Int
     lny::Int
     lnz::Int
+    pen::Pencil
     neighbors::Vector{Neighbor}
     comm::MPI.Comm
     rank::Int
     requests::Vector{MPI.Request}
+    root::Int
 end
 
 struct FieldGenerator
@@ -195,6 +197,8 @@ function MPIState(p::Parameter)
 
     requests = MPI.Request[]
 
+    root = 0
+
     s = MPIState(
         tau=p.tau_start,
         step=0,
@@ -205,10 +209,12 @@ function MPIState(p::Parameter)
         lnx=lnx,
         lny=lny,
         lnz=lnz,
+        pen=pen,
         neighbors=neighbors,
         comm=comm,
         rank=rank,
         requests=requests,
+        root=root,
     )
 
     MPI.Barrier(comm)
@@ -225,11 +231,7 @@ end
     return @view A[2:end-1, 2:end-1, 2:end-1]
 end
 
-function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Parameter)
-    # exchange data with neighboring nodes/subboxes
-    # we need to exchange the psi field as we need to compute its
-    # laplacian for time propagation
-
+function exchange_field!(s::MPIState)
     for neighbor in s.neighbors
         if neighbor.rank == s.rank
             # no need for communication -> copy memory directly
@@ -273,6 +275,13 @@ function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Paramet
 
     # reuse the rquests list for next time
     empty!(s.requests)
+end
+
+function compute_force!(out::Array{Complex{Float64}, 3}, s::MPIState, p::Parameter)
+    # exchange data with neighboring nodes/subboxes
+    # we need to exchange the psi field as we need to compute its
+    # laplacian for time propagation
+    exchange_field!(s)
 
     a = tau_to_a(s.tau)
     @inbounds for iz in 2:s.lnz
