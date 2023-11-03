@@ -21,7 +21,7 @@ Base.@kwdef struct Parameter
     L :: Float64
     # number of grid points in one dimension
     N :: Int
-    # time step size in tau
+    # time step size in tau (conformal time) in units of 1/m_r
     Delta_tau :: Float64
     # seed for random number generator
     seed :: Int
@@ -38,16 +38,16 @@ end
 
 abstract type AbstractState end
 
-log_to_H(l) = 1.0 / exp(l)
-H_to_t(H) = 1 / (2*H)
-t_to_H(t) = 1 / (2*t)
-H_to_log(H) = log(1/H)
-t_to_tau(t) = 2*sqrt(t)
-log_to_tau(log) = t_to_tau(H_to_t(log_to_H(log)))
-t_to_a(t) = sqrt(t)
-tau_to_t(tau) = 0.5*(tau)^2
-tau_to_a(tau) = 0.5*tau
-tau_to_log(tau) = H_to_log(t_to_H(tau_to_t(tau)))
+@inline log_to_H(l) = 1.0 / exp(l)
+@inline H_to_t(H) = 1 / (2*H)
+@inline t_to_H(t) = 1 / (2*t)
+@inline H_to_log(H) = log(1/H)
+@inline t_to_tau(t) = 2*sqrt(t)
+@inline log_to_tau(log) = t_to_tau(H_to_t(log_to_H(log)))
+@inline t_to_a(t) = sqrt(t)
+@inline tau_to_t(tau) = 0.5*(tau)^2
+@inline tau_to_a(tau) = 0.5*tau
+@inline tau_to_log(tau) = H_to_log(t_to_H(tau_to_t(tau)))
 
 const field_max = 1 / sqrt(2)
 
