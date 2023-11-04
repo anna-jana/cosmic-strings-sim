@@ -30,6 +30,7 @@ function compute_force!(out::Array{Complex{Float64},3},
 end
 
 function random_field_single_node(p::Parameter)
+    # field initialization method from gorghetto etc al (appendix A in axions from strings: the attractive solutioN)
     hat = Array{Float64,3}(undef, (p.N, p.N, p.N))
     ks = FFTW.fftfreq(p.N, 1 / p.dx) .* (2 * pi)
     @inbounds for iz in 1:p.N
@@ -44,6 +45,7 @@ function random_field_single_node(p::Parameter)
         end
     end
     field = FFTW.ifft(hat)
+    # return field ./ mean(abs.(field))
     return field ./ mean(abs.(field))
 end
 
@@ -53,7 +55,6 @@ function SingleNodeState(p::Parameter)
 
     phi = random_field_single_node(p)
     psi = phi * a
-    # dot(psi) = dot(a phi) = dot(a) phi + a dot(phi)
     phi_dot = random_field_single_node(p)
     psi_dot = @. a^2 * (H * phi + phi_dot)
 

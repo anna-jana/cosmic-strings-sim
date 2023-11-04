@@ -110,6 +110,22 @@ xlabel(raw"$\log(m_r / H)$")
 ylabel(raw"$\zeta = a l / a^3 L^3 \times t^2$")
 savefig("string_length.pdf")
 
+# velocities
+data = readdlm("velocities.dat")
+mean_v, mean_v2, mean_gamma = data[:, 2], data[:, 3], data[:, 4]
+
+fig, axs = subplots(3, 1, sharex=true)
+axs[1].plot(logs, mean_v)
+axs[2].plot(logs, mean_v2)
+axs[3].plot(logs, mean_gamma)
+
+axs[3].set_xlabel(raw"$\log(m_r / H)$")
+axs[1].set_ylabel(raw"\langle v \rangle")
+axs[2].set_ylabel(raw"\langle v^2 \rangle")
+axs[3].set_ylabel(raw"\langle \gamma \rangle")
+
+savefig("velocties.pdf")
+
 # string movie
 function plot_strings(params :: AxionStrings.Parameter, strings; colors_different=false)
     fig = gcf()

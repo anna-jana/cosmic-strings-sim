@@ -91,7 +91,7 @@ function random_field_mpi(field_generator::FieldGenerator, p::Parameter)
     ldiv!(field, field_generator.plan, field_generator.hat)
 
     # normalize to the local mean
-    field ./= mean(abs, parent(field))
+    # field ./= mean(abs, parent(field))
 
     return field
 end

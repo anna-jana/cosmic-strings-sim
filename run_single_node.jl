@@ -12,6 +12,7 @@ write("parameter.json", json(p))
 string_lengths = []
 energies = []
 strings = []
+velocities = []
 
 ntimes = 50
 every = div(p.nsteps, ntimes)
@@ -22,7 +23,8 @@ for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
     if i % every == 0 || i == p.nsteps
         println("computing strings and energies...")
-        strs = AxionStrings.detect_strings(s, p)
+        strs, mean_v, mean_v2, mean_gamma = AxionStrings.detect_strings(s, p)
+        push!(velocities, (s.tau, mean_v, mean_v2, mean_gamma))
         push!(strings, (s.tau, strs))
         push!(string_lengths, (s.tau, AxionStrings.total_string_length(s, p, strs)))
         push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
@@ -43,6 +45,7 @@ println("writing data files")
 writedlm("string_length.dat", string_lengths)
 writedlm("energies.dat", energies)
 write("strings.json", json(strings))
+writedlm("velocities.dat", velocities)
 println("done")
 
 if do_spectra
@@ -53,5 +56,3 @@ if do_spectra
     writedlm("spectrum2.dat", hcat(wavenumber, power_ppse, power_screened))
     println("done")
 end
-
-@show hash(s.psi)

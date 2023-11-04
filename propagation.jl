@@ -6,6 +6,7 @@
 end
 
 function make_step!(s::AbstractState, p::Parameter)
+    # this is the method used by gorghetto in axion strings: the attractive solution
     # propagate PDE using velocity verlet algorithm
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
     s.step += 1

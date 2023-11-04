@@ -52,12 +52,13 @@
 [x] rewrite in julia
 [x] fft -> real fft
 [x] create animation of strings
-[ ] plot string length
-[ ] plot spectra
+[x] plot string length
+[x] compute spectrum and instantaeous spectrum (c)
+[x] plot spectra
 [ ] study creation of initial conditions
+[ ] add option to not have an expanding background for initialization
+[ ] add different sizes of the simulation box in diffenrent dimension with the same dx such that we can simulate 2d
 [ ] higher order time propagation algorithm
 [ ] higher order stecil for laplacian
-[ ] GPU code?
-[ ] compute spectrum and instantaeous spectrum (c)
 [ ] compute gamme factor for strings
-[ ] distributed memory paralism
+[x] distributed memory paralism
