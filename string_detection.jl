@@ -26,7 +26,7 @@ end
 
 function total_string_length(s::AbstractState, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
     l = p.dx * sum(strings) do s
-        sum(cyclic_dist_squared(p, s[i], s[mod1(i + 1, length(s))])^2 for i in 1:length(s))
+        sum(sqrt(cyclic_dist_squared(p, s[i], s[mod1(i + 1, length(s))])) for i in 1:length(s))
     end
     return total_string_length(s, p, l)
 end

@@ -177,9 +177,6 @@ function make_string_movie(p::AxionStrings.Parameter)
     outfile = "strings.gif"
     run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"], files, outfile)))
     println("done")
-
-    plt.close("all")
-    ion()
 end
 
 function field_plot(p, s)
@@ -207,5 +204,5 @@ function field_plot(p, s)
     title("log = $kappa")
 end
 
-
-
+plt.close("all")
+ion()
