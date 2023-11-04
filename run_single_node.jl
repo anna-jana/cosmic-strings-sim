@@ -31,8 +31,9 @@ for i in 1:p.nsteps
     if i == p.nsteps - 1 && do_spectra
         println("computing spectrum 1")
         strs = AxionStrings.detect_strings(s, p)
-        @time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
-        writedlm("spectrum1.dat", hcat(wavenumber, power))
+        @time wavenumber, power_ppse = AxionStrings.compute_spectrum_ppse(p, s, strs)
+        _, power_screened = AxionStrings.compute_spectrum_autoscreen(p, s)
+        writedlm("spectrum1.dat", hcat(wavenumber, power_ppse, power_screened))
         println("done")
     end
     AxionStrings.make_step!(s, p)
@@ -47,8 +48,9 @@ println("done")
 if do_spectra
     println("computing spectrum 2")
     strs = AxionStrings.detect_strings(s, p)
-    @time wavenumber, power = AxionStrings.compute_spectrum(p, s, strs)
-    writedlm("spectrum2.dat", hcat(wavenumber, power))
+    @time wavenumber, power_ppse = AxionStrings.compute_spectrum_ppse(p, s, strs)
+    _, power_screened = AxionStrings.compute_spectrum_autoscreen(p, s)
+    writedlm("spectrum2.dat", hcat(wavenumber, power_ppse, power_screened))
     println("done")
 end
 

@@ -63,7 +63,7 @@ function compute_integration_spheres(p::Parameter, physical_ks, bin_width)
             end
         end
     end
-
+    return spheres
 end
 
 
@@ -78,7 +78,7 @@ function compute_power_spectrum(p::Parameter, field, spheres, surface_element, b
         spectrum[i] *= surface_element[i]
         spectrum[i] *= bin_ks[i]^2 / p.L^3 / (4 * pi) * 0.5
     end
-
+    return spectrum
 end
 
 # compute PPSE (pseudo-power-spectrum-estimator) of the theta-dot field
@@ -164,14 +164,14 @@ end
 function compute_spectrum_autoscreen(p :: Parameter, s :: SingleNodeState)
     a = tau_to_a(s.tau)
     theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
-    r = compute_radial_mode.(s, a)
+    r = compute_radial_mode.(s.psi, a)
 
     physical_ks, bin_width, surface_element, bin_ks = power_spectrum_utils(p, a)
     spheres = compute_integration_spheres(p, physical_ks, bin_width)
 
-    screened_theta_dot = @. (1 - r) * theta_dot
+    screened_theta_dot = @. (1 + r) * theta_dot
 
-    return compute_power_spectrum(p, screened_theta_dot, spheres, surface_element, bin_ks)
+    return bin_ks, compute_power_spectrum(p, screened_theta_dot, spheres, surface_element, bin_ks)
 end
 
 # all(isapprox.(rfft(theat_dot), fft(theat_dot)[1:div(p.N, 2)+1, :, :]))
@@ -179,9 +179,10 @@ end
 
 function compute_spectrum_autoscreen(p :: Parameter, s :: MPIState)
     a = tau_to_a(s.tau)
-    theta_dot = compute_theta_dot.(a, @view s.psi[2:end-1, 2:end-1, 2:end-1], @view s.psi_dot[2:end-1, 2:end-1, 2:end-1])
-    r = compute_radial_mode.(s, a)
-    screened_theta_dot = @. (1 - r) * theta_dot
+    @views local_psi = s.psi[2:end-1, 2:end-1, 2:end-1]
+    @views theta_dot = compute_theta_dot.(a, local_psi, s.psi_dot[2:end-1, 2:end-1, 2:end-1])
+    r = compute_radial_mode.(local_psi, a)
+    screened_theta_dot = @. (1 + r) * theta_dot
 
     physical_ks, bin_width, surface_element, bin_ks = power_spectrum_utils(p, a)
 

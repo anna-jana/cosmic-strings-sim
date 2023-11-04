@@ -91,6 +91,7 @@ include("single_node.jl")
 include("mpi.jl")
 include("energy.jl")
 include("string_detection.jl")
+include("string_gamma_factors.jl")
 include("spectrum.jl")
 
 end

@@ -9,6 +9,7 @@ using JSON
 using Polynomials
 using Printf
 using StaticArrays
+using LinearAlgebra
 
 println("start")
 
@@ -56,23 +57,28 @@ savefig("energy_densities.pdf")
 # spectra
 println("spectra")
 data = readdlm("spectrum1.dat")
-k1, P1 = data[:, 1], data[:, 2]
+k1, P1_ppse, P1_screened = data[:, 1], data[:, 2], data[:, 3]
 data = readdlm("spectrum2.dat")
-k2, P2 = data[:, 1], data[:, 2]
+k2, P2_ppse, P2_screened = data[:, 1], data[:, 2], data[:, 3]
 tau1 = p.Delta_tau * (p.nsteps - 1)
 tau2 = p.Delta_tau * p.nsteps
 
 log1 = AxionStrings.tau_to_log(tau1)
 log2 = AxionStrings.tau_to_log(tau2)
 
-log_mid, ks, F = AxionStrings.compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2)
+log_mid, ks, F_ppse = AxionStrings.compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
+_, _, F_screened = AxionStrings.compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
 
-F_fit = fit(log.(ks[1:end-1]), log.(F[1:end-1]), 1)
-q_fit = -F_fit[1]
+F_fit_ppse = fit(log.(ks[1:end-1]), log.(F_ppse[1:end-1]), 1)
+F_fit_screened = fit(log.(ks[1:end-1]), log.(F_screened[1:end-1]), 1)
+q_fit_ppse = -F_fit_ppse[1]
+q_fit_screened = -F_fit_screened[1]
 
 figure()
-plot(k1, P1, label="log = $log1")
-plot(k2, P2, label="log = $log2")
+plot(k1, P1_ppse, label="ppse, log = $log1")
+plot(k2, P2_ppse, label="ppse, log = $log2")
+plot(k1, P1_screened, label="screened, log = $log1")
+plot(k2, P2_screened, label="screeend, log = $log2")
 xlabel("comoving momentum |k|")
 ylabel("power spectrum P(k)")
 xscale("log")
@@ -82,8 +88,10 @@ title("spectrum of free axions")
 savefig("spectra.pdf")
 
 figure()
-loglog(ks, F, label="simulation at log=$log_mid")
-loglog(ks[1:end-1], exp.(F_fit.(log.(ks[1:end-1]))), label="fit q = $q_fit")
+loglog(ks, F_ppse, label="ppse, simulation at log=$log_mid")
+loglog(ks, F_screened, label="screened, simulation at log=$log_mid")
+loglog(ks[1:end-1], exp.(F_fit_ppse.(log.(ks[1:end-1]))), label="ppse, fit q = $q_fit_ppse")
+loglog(ks[1:end-1], exp.(F_fit_screened.(log.(ks[1:end-1]))), label="screened, fit q = $q_fit_screened")
 xlabel("comoving momentum |k|")
 ylabel("F(k)")
 title("instantaneous emission spectrum")

@@ -42,15 +42,16 @@ function compute_energy_at(
     return axion_kinetic, axion_gradient, radial_kinetic, radial_gradient, radial_potential, interaction
 end
 
-function compute_radial_mode(s::AbstractState, a)
-    return sqrt(2) * abs(s.psi) / a - 1
+function compute_radial_mode(psi, a)
+    # return sqrt(2) * abs(psi) / a - 1
+    return sqrt(2) * real(psi / exp(angle(psi) * im)) / a - 1
 end
 
 function compute_energy(s::SingleNodeState, p::Parameter)
     a = tau_to_a(s.tau)
     H = t_to_H(tau_to_t(s.tau))
     theta = angle.(s.psi)
-    radial = @. compute_radial_mode(s, a)
+    radial = compute_radial_mode.(s.psi, a)
 
     mean_axion_kinetic = 0.0
     mean_axion_gradient = 0.0

@@ -51,7 +51,7 @@ function SingleNodeState(p::Parameter)
     s = SingleNodeState(
         tau=p.tau_start,
         step=0,
-        psi=random_field_single_node(p),
+        psi=random_field_single_node(p) * tau_to_a(p.tau_start),
         psi_dot=random_field_single_node(p),
         psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
         next_psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
