@@ -157,8 +157,16 @@ function MPIState(p::Parameter)
     field_generator = FieldGenerator(pen, p)
 
     # generate random psi and psi_dot
-    pen_psi = random_field_mpi(field_generator, p)
-    pen_psi_dot = random_field_mpi(field_generator, p)
+    # we are doing this is akward way to save on memory
+    pen_psi = random_field_mpi(field_generator, p) # initialy phi
+    pen_psi_dot = random_field_mpi(field_generator, p) # initialy d phi / dt
+
+    H = t_to_H(tau_to_t(p.tau_start))
+    a = tau_to_a(p.tau_start)
+
+    pen_psi_dot .+= H * pen_psi # here pen_psi is still phi
+    pen_psi_dot .*= a^2
+    pen_psi .*= a
 
     field_generator = nothing # release field generator memory to gc
 

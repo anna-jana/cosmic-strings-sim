@@ -69,10 +69,10 @@ log2 = AxionStrings.tau_to_log(tau2)
 log_mid, ks, F_ppse = AxionStrings.compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
 _, _, F_screened = AxionStrings.compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
 
-F_fit_ppse = fit(log.(ks[1:end-1]), log.(F_ppse[1:end-1]), 1)
-F_fit_screened = fit(log.(ks[1:end-1]), log.(F_screened[1:end-1]), 1)
-q_fit_ppse = -F_fit_ppse[1]
-q_fit_screened = -F_fit_screened[1]
+#F_fit_ppse = fit(log.(ks[1:end-1]), log.(F_ppse[1:end-1]), 1)
+#F_fit_screened = fit(log.(ks[1:end-1]), log.(F_screened[1:end-1]), 1)
+#q_fit_ppse = -F_fit_ppse[1]
+#q_fit_screened = -F_fit_screened[1]
 
 figure()
 plot(k1, P1_ppse, label="ppse, log = $log1")
@@ -90,8 +90,8 @@ savefig("spectra.pdf")
 figure()
 loglog(ks, F_ppse, label="ppse, simulation at log=$log_mid")
 loglog(ks, F_screened, label="screened, simulation at log=$log_mid")
-loglog(ks[1:end-1], exp.(F_fit_ppse.(log.(ks[1:end-1]))), label="ppse, fit q = $q_fit_ppse")
-loglog(ks[1:end-1], exp.(F_fit_screened.(log.(ks[1:end-1]))), label="screened, fit q = $q_fit_screened")
+#loglog(ks[1:end-1], exp.(F_fit_ppse.(log.(ks[1:end-1]))), label="ppse, fit q = $q_fit_ppse")
+#loglog(ks[1:end-1], exp.(F_fit_screened.(log.(ks[1:end-1]))), label="screened, fit q = $q_fit_screened")
 xlabel("comoving momentum |k|")
 ylabel("F(k)")
 title("instantaneous emission spectrum")
@@ -153,30 +153,59 @@ function plot_strings(params :: AxionStrings.Parameter, strings; colors_differen
     return nothing
 end
 
-tmpdir = tempname()
-mkdir(tmpdir)
-files = String[]
-strings = JSON.parse(read("strings.json", String))
+function make_string_movie(p::AxionStrings.Parameter)
+    tmpdir = tempname()
+    mkdir(tmpdir)
+    files = String[]
+    strings = JSON.parse(read("strings.json", String))
 
-println("plotting all frames")
-figure()
-for (i, (tau, any_strs)) in enumerate(strings)
-    local strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
-    println("$i of $(length(strings))")
-    clf()
-    plot_strings(p, strs; colors_different=false)
-    title(raw"$\tau =$" * (@sprintf "%.2f" tau) * raw", $\log(m_r/H) = $" *
-          (@sprintf "%.2f" AxionStrings.tau_to_log(tau)))
-    fname = joinpath(tmpdir, "strings_step=$i.jpg")
-    savefig(fname)
-    push!(files, fname)
+    println("plotting all frames")
+    figure()
+    for (i, (tau, any_strs)) in enumerate(strings)
+        local strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
+        println("$i of $(length(strings))")
+        clf()
+        plot_strings(p, strs; colors_different=false)
+        title(raw"$\tau =$" * (@sprintf "%.2f" tau) * raw", $\log(m_r/H) = $" *
+              (@sprintf "%.2f" AxionStrings.tau_to_log(tau)))
+        fname = joinpath(tmpdir, "strings_step=$i.jpg")
+        savefig(fname)
+        push!(files, fname)
+    end
+
+    println("creating gif")
+    outfile = "strings.gif"
+    run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"], files, outfile)))
+    println("done")
+
+    plt.close("all")
+    ion()
 end
 
-println("creating gif")
-outfile = "strings.gif"
-run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"], files, outfile)))
-println("done")
+function field_plot(p, s)
+    slice = 1
+    a = AxionStrings.tau_to_a(s.tau)
+    r = AxionStrings.compute_radial_mode.(s.psi, a)
+    theta = angle.(s.psi)
+    xs = range(0, p.L, p.N)
+    kappa = AxionStrings.tau_to_log(s.tau)
 
-plt.close("all")
-ion()
+    figure()
+
+    subplot(2, 1, 1)
+    pcolormesh(xs, xs, r[slice, :, :])
+    xlabel("x_comoving m_r")
+    ylabel("y_comoving m_r")
+    colorbar(label="radial mode / f_a")
+
+    subplot(2, 1, 2)
+    pcolormesh(xs, xs, theta[slice, :, :], cmap="twilight")
+    xlabel("x_comoving m_r")
+    ylabel("y_comoving m_r")
+    colorbar(label="theta")
+
+    title("log = $kappa")
+end
+
+
 

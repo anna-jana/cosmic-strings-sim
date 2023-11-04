@@ -48,11 +48,20 @@ function random_field_single_node(p::Parameter)
 end
 
 function SingleNodeState(p::Parameter)
+    H = t_to_H(tau_to_t(p.tau_start))
+    a = tau_to_a(p.tau_start)
+
+    phi = random_field_single_node(p)
+    psi = phi * a
+    # dot(psi) = dot(a phi) = dot(a) phi + a dot(phi)
+    phi_dot = random_field_single_node(p)
+    psi_dot = @. a^2 * (H * phi + phi_dot)
+
     s = SingleNodeState(
         tau=p.tau_start,
         step=0,
-        psi=random_field_single_node(p) * tau_to_a(p.tau_start),
-        psi_dot=random_field_single_node(p),
+        psi=psi,
+        psi_dot=psi_dot,
         psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
         next_psi_dot_dot=Array{Float64,3}(undef, (p.N, p.N, p.N)),
     )
