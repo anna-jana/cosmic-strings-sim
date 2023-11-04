@@ -90,7 +90,7 @@ include("propagation.jl")
 include("single_node.jl")
 include("mpi.jl")
 include("energy.jl")
-include("strings.jl")
+include("string_detection.jl")
 include("spectrum.jl")
 
 end
