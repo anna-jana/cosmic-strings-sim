@@ -17,7 +17,7 @@ velocities = []
 ntimes = 50
 every = div(p.nsteps, ntimes)
 
-do_spectra = false
+do_spectra = true
 
 for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
@@ -32,10 +32,10 @@ for i in 1:p.nsteps
     end
     if i == p.nsteps - 1 && do_spectra
         println("computing spectrum 1")
-        strs = AxionStrings.detect_strings(s, p)
-        @time wavenumber, power_ppse = AxionStrings.compute_spectrum_ppse(p, s, strs)
+        strs, mean_v, mean_v2, mean_gamma = AxionStrings.detect_strings(s, p)
+        @time wavenumber, power_ppse, power_uncorrected = AxionStrings.compute_spectrum_ppse(p, s, strs)
         _, power_screened = AxionStrings.compute_spectrum_autoscreen(p, s)
-        writedlm("spectrum1.dat", hcat(wavenumber, power_ppse, power_screened))
+        writedlm("spectrum1.dat", hcat(wavenumber, power_ppse, power_uncorrected, power_screened))
         println("done")
     end
     AxionStrings.make_step!(s, p)
@@ -44,15 +44,15 @@ end
 println("writing data files")
 writedlm("string_length.dat", string_lengths)
 writedlm("energies.dat", energies)
-write("strings.json", json(strings))
 writedlm("velocities.dat", velocities)
+write("strings.json", json(strings))
 println("done")
 
 if do_spectra
     println("computing spectrum 2")
-    strs = AxionStrings.detect_strings(s, p)
-    @time wavenumber, power_ppse = AxionStrings.compute_spectrum_ppse(p, s, strs)
+    strs, mean_v, mean_v2, mean_gamma = AxionStrings.detect_strings(s, p)
+    @time wavenumber, power_ppse, power_uncorrected = AxionStrings.compute_spectrum_ppse(p, s, strs)
     _, power_screened = AxionStrings.compute_spectrum_autoscreen(p, s)
-    writedlm("spectrum2.dat", hcat(wavenumber, power_ppse, power_screened))
+    writedlm("spectrum2.dat", hcat(wavenumber, power_ppse, power_uncorrected, power_screened))
     println("done")
 end

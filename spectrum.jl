@@ -7,24 +7,79 @@
     return d_theta_d_tau / a
 end
 
-@inline function calc_k_max_grid(n, d)
-    if n % 2 == 0
-        return 2 * pi * (n / 2) / (d*n)
+@inline function calc_k_max_grid(N, d)
+    if N % 2 == 0
+        return 2 * pi * (N / 2) / (d*N)
     else
-        return 2 * pi * ((n - 1) / 2) / (d*n)
+        return 2 * pi * ((N - 1) / 2) / (d*N)
     end
 end
 
-@inline function idx_to_k(p, idx)
-    return idx < div(p.N, 2) ? idx : -div(p.N, 2) + idx  - div(p.N, 2)
+# k = 2pi * integer_k / (Delta x * N)
+@inline function index_to_integer_k(N::Int, i::Int)
+    if N % 2 == 0
+        return i < div(N, 2) ? i : i - N
+    else
+        return i <= div(N - 1, 2) ? i : i - N
+    end
 end
 
-@inline function substract_wave_numbers(p, i, j)
-    k = idx_to_k(p, i)
-    k_prime = idx_to_k(p, j)
-    k_diff = mod(k - k_prime + div(p.N, 2), p.N) - div(p.N, 2)
-    idx_diff = k_diff < 0 ? k_diff + p.N : k_diff
-    return idx_diff
+@inline function index_to_integer_k(N::Int, i::Tuple{Int, Int, Int})
+    return (
+        index_to_integer_k(N, i[1]),
+        index_to_integer_k(N, i[2]),
+        index_to_integer_k(N, i[3]),
+    )
+end
+
+@inline function integer_k_to_index(N::Int, integer_k::Int)
+    return integer_k >= 0 ? integer_k : integer_k + N
+end
+
+@inline function integer_k_to_index(N::Int, integer_k::Tuple{Int, Int, Int})
+    ix = integer_k_to_index(N, integer_k[1])
+    if ix >= div(N, 2) + 1
+        ix -= div(N, 2) + 1
+    end
+    return (
+        ix,
+        integer_k_to_index(N, integer_k[2]),
+        integer_k_to_index(N, integer_k[3]),
+    )
+end
+
+@inline min_integer_k(N) = N % 2 == 0 ? -div(N, 2) : -div(N - 1, 2)
+
+@inline max_integer_k(N) = div(N - 1, 2)
+
+@inline function check_integer_k(integer_k::Int, min_l, max_l)
+    return integer_k > max_l || integer_k < min_l
+end
+
+@inline function check_integer_k(integer_k::Tuple{Int, Int, Int}, min_l, max_l)
+    return check_integer_k(integer_k[1], min_l, max_l) &&
+           check_integer_k(integer_k[2], min_l, max_l) &&
+           check_integer_k(integer_k[3], min_l, max_l)
+end
+
+@inline function substract_wave_numbers_lookup(W_fft, p, min_l, max_l, i1, i2)
+    # go from 1-based to 0-based
+    i1 = (i1[1] - 1, i1[2] - 1, i1[3] - 1)
+    i2 = (i2[1] - 1, i2[2] - 1, i2[3] - 1)
+    # convert to integers l such that k = 2pi * l / (Delta x * N)
+    k1 = index_to_integer_k(p.N, i1)
+    k2 = index_to_integer_k(p.N, i2)
+    # do the substraction in k space
+    Delta_k = (k1[1] - k2[1], k1[2] - k2[2], k1[3] - k2[3])
+    if check_integer_k(Delta_k, min_l, max_l)
+        # if the difference is outside of the k-range -> ignore
+        return 0.0
+    else
+        # convert back to index
+        ix, iy, iz = integer_k_to_index(p.N, Delta_k)
+        # convert back to 1-based and index into W_fft
+        return @inbounds W_fft[ix + 1, iy + 1, iz + 1]
+    end
 end
 
 function power_spectrum_utils(p::Parameter, a)
@@ -81,13 +136,35 @@ function compute_power_spectrum(p::Parameter, field, spheres, surface_element, b
     return spectrum
 end
 
-# compute PPSE (pseudo-power-spectrum-estimator) of the theta-dot field
-# -> the spectrum of number denseties of axtion
-function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: Vector{Vector{SVector{3, Float64}}})
-    a = tau_to_a(s.tau)
-    theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
+function compute_M(p::Parameter, W_fft, spheres, surface_element, bin_ks)
+    # compute M
+    # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
+    # NOTE: this is the computationally most expensive part!
+    M = zeros(p.nbins, p.nbins)
+    f = p.L^6 * (4 * pi)^2
+    min_l = min_integer_k(p.N)
+    max_l = max_integer_k(p.N)
+    for i in 1:p.nbins
+        for j in i:p.nbins
+            println("$((i, j)) of $((p.nbins, p.nbins))")
+            # integrate spheres
+            s_atomic = Threads.Atomic{Float64}(0.0)
+            Threads.@threads for idx1 in spheres[i]
+                for idx2 in spheres[j]
+                    Threads.atomic_add!(s_atomic,
+                       abs2(substract_wave_numbers_lookup(
+                              W_fft, p, min_l, max_l, idx1, idx2)))
+                end
+            end
+            s = s_atomic[]
+            s *= surface_element[i] * surface_element[j] / f
+            M[i, j] = M[j, i] = s
+        end
+    end
+    return M
+end
 
-    # compute W (string mask)
+function get_string_mask(p::Parameter, strings)
     W = ones(p.N, p.N, p.N)
     for string in strings
         for point in string
@@ -106,6 +183,18 @@ function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: 
             end
         end
     end
+    return W
+end
+
+
+# compute PPSE (pseudo-power-spectrum-estimator) of the theta-dot field
+# -> the spectrum of number denseties of axtion
+function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: Vector{Vector{SVector{3, Float64}}})
+    a = tau_to_a(s.tau)
+    theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
+
+    # compute W (string mask)
+    W = get_string_mask(p, strings)
 
     # mask out the strings in theta dot
     theta_dot .*= W
@@ -117,48 +206,27 @@ function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: 
 
     W_fft = FFTW.rfft(W)
 
-    # compute M
-    # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
-    # NOTE: this is the computationally most expensive part!
-    M = zeros(p.nbins, p.nbins)
-    f = p.L^6 * (4 * pi)^2
-    for i in 1:p.nbins
-        for j in i:p.nbins
-            println("$((i, j)) of $((p.nbins, p.nbins))")
-            # integrate spheres
-            s_atomic = Threads.Atomic{Float64}(0.0)
-            Threads.@threads for idx1 in spheres[i]
-                for idx2 in spheres[j]
-                    ix = substract_wave_numbers(p, idx1[1] - 1, idx2[1] - 1)
-                    if ix >= size(W_fft, 1)
-                        ix = ix - size(W_fft, 1)
-                    end
-                    iy = substract_wave_numbers(p, idx1[2] - 1, idx2[2] - 1)
-                    iz = substract_wave_numbers(p, idx1[3] - 1, idx2[3] - 1)
-                    Threads.atomic_add!(s_atomic, abs2(@inbounds W_fft[ix + 1, iy + 1, iz + 1]))
-                end
-            end
-            s = s_atomic[]
-            s *= surface_element[i] * surface_element[j] / f
-            M[i, j] = M[j, i] = s
-        end
-    end
+    M = compute_M(p, W_fft, spheres, surface_element, bin_ks)
 
     M_inv = inv(M)
 
+    # the definition of M_inv is not exactly matrix inverse but
+    # is an integral (hence the bin_width) as well some integration measure factors
     for j in 1:p.nbins
         for i in 1:p.nbins
-            M_inv[i, j] = M_inv[i, j] * (2 * pi)^2 / (bin_width * bin_ks[i]^2 * bin_ks[j]^2)
+            M_inv[i, j] *= (2 * pi^2)^2 / (bin_width * bin_ks[i]^2 * bin_ks[j]^2)
         end
     end
 
     spectrum_corrected = M_inv * spectrum_uncorrected # NOTE: matrix multiply!
 
+    # also applying M^-1 to P is not exactly matrix multiplication
+    # hence again factors
     for i in p.nbins
-        spectrum_corrected[i] *= bin_ks[i]^2 / p.L^3 / (2*pi^2) * bin_width
+        spectrum_corrected[i] *= bin_ks[i]^2 * bin_width / p.L^3 / (2*pi^2)
     end
 
-    return bin_ks, spectrum_corrected
+    return bin_ks, spectrum_corrected, spectrum_uncorrected
 end
 
 function compute_spectrum_autoscreen(p :: Parameter, s :: SingleNodeState)
@@ -171,7 +239,9 @@ function compute_spectrum_autoscreen(p :: Parameter, s :: SingleNodeState)
 
     screened_theta_dot = @. (1 + r) * theta_dot
 
-    return bin_ks, compute_power_spectrum(p, screened_theta_dot, spheres, surface_element, bin_ks)
+    spectrum = compute_power_spectrum(p, screened_theta_dot, spheres, surface_element, bin_ks)
+
+    return bin_ks, spectrum
 end
 
 # all(isapprox.(rfft(theat_dot), fft(theat_dot)[1:div(p.N, 2)+1, :, :]))

@@ -57,9 +57,9 @@ savefig("energy_densities.pdf")
 # spectra
 println("spectra")
 data = readdlm("spectrum1.dat")
-k1, P1_ppse, P1_screened = data[:, 1], data[:, 2], data[:, 3]
+k1, P1_ppse, P1_uncorrected, P1_screened = data[:, 1], data[:, 2], data[:, 3], data[:, 4]
 data = readdlm("spectrum2.dat")
-k2, P2_ppse, P2_screened = data[:, 1], data[:, 2], data[:, 3]
+k2, P2_ppse, P2_uncorrected, P2_screened = data[:, 1], data[:, 2], data[:, 3], data[:, 4]
 tau1 = p.Delta_tau * (p.nsteps - 1)
 tau2 = p.Delta_tau * p.nsteps
 
@@ -79,6 +79,8 @@ plot(k1, P1_ppse, label="ppse, log = $log1")
 plot(k2, P2_ppse, label="ppse, log = $log2")
 plot(k1, P1_screened, label="screened, log = $log1")
 plot(k2, P2_screened, label="screeend, log = $log2")
+plot(k1, P1_uncorrected, label="uncorrected, log = $log1")
+plot(k2, P2_uncorrected, label="uncorrected, log = $log2")
 xlabel("comoving momentum |k|")
 ylabel("power spectrum P(k)")
 xscale("log")
