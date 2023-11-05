@@ -91,13 +91,13 @@ function power_spectrum_utils(p::Parameter, a)
     Delta_k = 2*pi / (p.N * dx_physical)
     bin_width = kmax / p.nbins
 
+    bin_ks = [i * bin_width + bin_width/2 for i in 1:p.nbins]
+
     surface_element = map(1:p.nbins) do i
         vol = 4.0/3.0 * pi * (((i + 1)*bin_width)^3 - (i*bin_width)^3)
         area = 4*pi * (i*bin_width + bin_width/2)^2
-        area / vol * Delta_k^3
+        area / vol * Delta_k^3 / bin_ks[i]^2
     end
-
-    bin_ks = [i * bin_width + bin_width/2 for i in 1:p.nbins]
 
     return physical_ks, bin_width, surface_element, bin_ks
 end
@@ -222,9 +222,7 @@ function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: 
 
     # also applying M^-1 to P is not exactly matrix multiplication
     # hence again factors
-    for i in p.nbins
-        spectrum_corrected[i] *= bin_ks[i]^2 * bin_width / p.L^3 / (2*pi^2)
-    end
+    @. spectrum_corrected *= bin_ks^2 * bin_width / p.L^3 / (2*pi^2)
 
     return bin_ks, spectrum_corrected, spectrum_uncorrected
 end

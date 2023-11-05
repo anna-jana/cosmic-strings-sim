@@ -74,13 +74,16 @@ _, _, F_screened = AxionStrings.compute_instanteous_emission_spectrum(P1_screene
 #q_fit_ppse = -F_fit_ppse[1]
 #q_fit_screened = -F_fit_screened[1]
 
+my_norm(ks, xs) = sqrt(sum(xs.^2) * (ks[2] - ks[1]))
+normalize(ks, xs) = xs ./ my_norm(ks, xs)
+
 figure()
-plot(k1, P1_ppse, label="ppse, log = $log1")
-plot(k2, P2_ppse, label="ppse, log = $log2")
-plot(k1, P1_screened, label="screened, log = $log1")
-plot(k2, P2_screened, label="screeend, log = $log2")
-plot(k1, P1_uncorrected, label="uncorrected, log = $log1")
-plot(k2, P2_uncorrected, label="uncorrected, log = $log2")
+plot(k1, normalize(k1, P1_ppse), label="ppse, log = $log1")
+plot(k2, normalize(k2, P2_ppse), label="ppse, log = $log2")
+plot(k1, normalize(k1, P1_screened), label="screened, log = $log1")
+plot(k2, normalize(k2, P2_screened), label="screeend, log = $log2")
+plot(k1, normalize(k1, P1_uncorrected), label="uncorrected, log = $log1")
+plot(k2, normalize(k2, P2_uncorrected), label="uncorrected, log = $log2")
 xlabel("comoving momentum |k|")
 ylabel("power spectrum P(k)")
 xscale("log")
