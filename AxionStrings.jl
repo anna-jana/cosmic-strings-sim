@@ -38,6 +38,11 @@ end
 
 abstract type AbstractState end
 
+function reset_time!(s::AbstractState, p::Parameter)
+    s.tau = p.tau_start
+    s.step = 0
+end
+
 @inline log_to_H(l) = 1.0 / exp(l)
 @inline H_to_t(H) = 1 / (2*H)
 @inline t_to_H(t) = 1 / (2*t)
@@ -90,7 +95,7 @@ include("propagation.jl")
 include("single_node.jl")
 include("mpi.jl")
 include("energy.jl")
-include("string_detection.jl")
+include("strings.jl")
 include("spectrum.jl")
 
 end

@@ -111,18 +111,20 @@ ylabel(raw"$\zeta = a l / a^3 L^3 \times t^2$")
 savefig("string_length.pdf")
 
 # velocities
+println("velocities")
 data = readdlm("velocities.dat")
 mean_v, mean_v2, mean_gamma = data[:, 2], data[:, 3], data[:, 4]
 
 fig, axs = subplots(3, 1, sharex=true)
+fig.subplots_adjust(hspace=0)
 axs[1].plot(logs, mean_v)
 axs[2].plot(logs, mean_v2)
 axs[3].plot(logs, mean_gamma)
 
 axs[3].set_xlabel(raw"$\log(m_r / H)$")
-axs[1].set_ylabel(raw"\langle v \rangle")
-axs[2].set_ylabel(raw"\langle v^2 \rangle")
-axs[3].set_ylabel(raw"\langle \gamma \rangle")
+axs[1].set_ylabel(raw"$\langle v \rangle$")
+axs[2].set_ylabel(raw"$\langle v^2 \rangle$")
+axs[3].set_ylabel(raw"$\langle \gamma \rangle$")
 
 savefig("velocties.pdf")
 

@@ -51,6 +51,7 @@ function compute_gamma_factors(s::AbstractState, i1, i2, i3, i4)
     sum_v2 = 0.0
     sum_v = 0.0
     sum_gamma = 0.0
+    sum_norm = 0.0
 
     for i in (i1, i2, i3, i4)
         a = tau_to_a(s.tau)
@@ -63,7 +64,7 @@ function compute_gamma_factors(s::AbstractState, i1, i2, i3, i4)
         phi_dot = psi_dot / a^2 - H * phi
 
         # Moore et al: Axion dark matter: strings and their cores, eq. A10
-        gamma2_times_v2 = abs2(phi_dot) / c^2 * (1 + abs2(phi) / (8 * c^2)) + (phi' * phi_dot + phi * phi_dot')^2 / (16 * c^4)
+        gamma2_times_v2 = real(abs2(phi_dot) / c^2 * (1 + abs2(phi) / (8 * c^2)) + (phi' * phi_dot + phi * phi_dot')^2 / (16 * c^4))
         # gamma2_times_v2 = v^2 / (1 - v^2) = x
         # v^2 = (1 - v^2) * x
         # x = v^2 + v^2 x = v^2 (1 + x)
@@ -77,9 +78,10 @@ function compute_gamma_factors(s::AbstractState, i1, i2, i3, i4)
         sum_v += v * gamma
         sum_v2 += v2 * gamma
         sum_gamma += gamma^2
+        sum_norm += gamma
     end
 
-    return sum_v, sum_v2, sum_gamma
+    return sum_v, sum_v2, sum_gamma, sum_norm
 end
 
 function detect_strings(s :: SingleNodeState, p :: Parameter)
@@ -87,6 +89,7 @@ function detect_strings(s :: SingleNodeState, p :: Parameter)
     mean_v = 0.0
     mean_v2 = 0.0
     mean_gamma = 0.0
+    sum_norm = 0.0
 
     @inbounds for iz in 1:p.N
         @inbounds for iy in 1:p.N
@@ -97,7 +100,11 @@ function detect_strings(s :: SingleNodeState, p :: Parameter)
                 i4 = CartesianIndex(ix, mod1(iy + 1, p.N), iz)
                 if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
                     push!(string_points, SVector(ix - 1 + 0.5, iy - 1 + 0.5, iz))
-                    mean_v, mean_v2, mean_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    mean_v += new_v
+                    mean_v2 += new_v2
+                    mean_gamma += new_gamma
+                    sum_norm += new_norm
                 end
 
                 i1 = CartesianIndex(ix, iy, iz)
@@ -106,7 +113,11 @@ function detect_strings(s :: SingleNodeState, p :: Parameter)
                 i4 = CartesianIndex(ix, iy, mod1(iz + 1, p.N))
                 if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
                     push!(string_points, SVector(ix, iy - 1 + 0.5, iz - 1 + 0.5))
-                    mean_v, mean_v2, mean_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    mean_v += new_v
+                    mean_v2 += new_v2
+                    mean_gamma += new_gamma
+                    sum_norm += new_norm
                 end
 
                 i1 = CartesianIndex(ix, iy, iz)
@@ -115,15 +126,19 @@ function detect_strings(s :: SingleNodeState, p :: Parameter)
                 i4 = CartesianIndex(mod1(ix + 1, p.N), iy, iz)
                 if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
                     push!(string_points, SVector(ix - 1 + 0.5, iy, iz - 1 + 0.5))
-                    mean_v, mean_v2, mean_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    mean_v += new_v
+                    mean_v2 += new_v2
+                    mean_gamma += new_gamma
+                    sum_norm += new_norm
                 end
             end
         end
     end
 
-    mean_v /= length(string_points)
-    mean_v2 /= length(string_points)
-    mean_gamma /= length(string_points)
+    mean_v     /= sum_norm
+    mean_v2    /= sum_norm
+    mean_gamma /= sum_norm
 
     strings = Vector{SVector{3, Float64}}[]
 
@@ -175,7 +190,7 @@ function detect_strings(s::MPIState, p::Parameter)
     sum_v = 0.0
     sum_v2 = 0.0
     sum_gamma = 0.0
-    num_points = 0
+    sum_norm = 0.0
 
     @inbounds for iz in 1:s.lnz
         @inbounds for iy in 1:s.lny
@@ -190,8 +205,11 @@ function detect_strings(s::MPIState, p::Parameter)
                         string_length += 3/2
                     end
                     push!(string_points, new)
-                    sum_v, sum_v2, sum_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
-                    num_points += 1
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    sum_v += new_v
+                    sum_v2 += new_v2
+                    sum_gamma += new_gamma
+                    sum_norm += new_norm
                 end
 
                 i1 = CartesianIndex(ix, iy, iz)
@@ -204,8 +222,11 @@ function detect_strings(s::MPIState, p::Parameter)
                         string_length += 3/2
                     end
                     push!(string_points, new)
-                    sum_v, sum_v2, sum_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
-                    num_points += 1
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    sum_v += new_v
+                    sum_v2 += new_v2
+                    sum_gamma += new_gamma
+                    sum_norm += new_norm
                 end
 
                 i1 = CartesianIndex(ix, iy, iz)
@@ -218,8 +239,11 @@ function detect_strings(s::MPIState, p::Parameter)
                         string_length += 3/2
                     end
                     push!(string_points, new)
-                    sum_v, sum_v2, sum_gamma += compute_gamma_factors(s, i1, i2, i3, i4)
-                    num_points += 1
+                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
+                    sum_v += new_v
+                    sum_v2 += new_v2
+                    sum_gamma += new_gamma
+                    sum_norm += new_norm
                 end
             end
         end
@@ -258,16 +282,15 @@ function detect_strings(s::MPIState, p::Parameter)
 
     end
 
-    num_points = MPI.Reduce(num_points, +, s.root, s.comm)
-
     sum_v = MPI.Reduce(sum_v, +, s.root, s.comm)
     sum_v2 = MPI.Reduce(sum_v2, +, s.root, s.comm)
     sum_gamma = MPI.Reduce(sum_gamma, +, s.root, s.comm)
+    sum_norm = MPI.Reduce(sum_norm, +, s.root, s.comm)
 
     if s.rank == s.root
-        mean_v = sum_v / num_points
-        mean_v2 = sum_v2 / num_points
-        mean_gamma = sum_gamma / num_points
+        mean_v = sum_v / sum_norm
+        mean_v2 = sum_v2 / sum_norm
+        mean_gamma = sum_gamma / sum_norm
     else
         mean_v = mean_v2 = mean_gamma = 0.0
     end
