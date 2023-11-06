@@ -295,6 +295,7 @@ potential:
 = f_a^2 m_r^2 (r'^2 + 2 r') \left( \frac{1}{2} (\partial_\tau \theta )^2 + \frac{1}{2} (\tilde{\nabla} \theta)^2 / a(t)^2 \right)
 \end{equation}
 
+\newpage
 \section{Spectrum Estimation}
 
 We use the method described in \cite[sec. 3.2]{improved_estimation_hiramatsu}.
@@ -335,20 +336,54 @@ We use the method described in \cite[sec. 3.2]{improved_estimation_hiramatsu}.
     \item Compute $\hat{P}(k)$ using $M^{-1}(k, k')$ and $\tilde{P}(k)$
 \end{enumerate}
 
-\section{Instantaneous Emission Spectrum}
-We define the instantaeous emission spectrum into axions as
+\subsection{Instantaneous Emission Spectrum}
+We define the instantaneous emission spectrum into axions as
 \begin{equation}
     F[x = k / H, y = m_r / H] = A / a^3 \frac{\partial}{\partial t} \left( a^3 \frac{\partial \rho_a}{\partial k} \right)
 \end{equation}
 
-\section{String Length}
+\newpage
+\section{Strings}
 
+\subsection{String Identification}
+A plaquette in the grid contains a string iff the complex field $\phi$ wraps the fundamental domain once around the plaquette.
+This is equivalent to if it crosses the real axis with the same handedness twice.
+The real axis lies between $\phi_1$ and $\phi_2$ iff
+\begin{equation}
+	r(\phi_1, \phi_2) = \mathrm{Im}(\phi_1) \mathrm{Im}(\phi_2) < 0.
+\end{equation} 
+The handedness of a rotation between $\phi_1$ and $\phi_2$ is given by
+\begin{equation}
+	h(\phi_1, \phi_2) = \mathrm{sgn} \, \mathrm{Im} (\phi_1 \phi_2^*).
+\end{equation}
+Hence the effective number of crossings is given by
+\begin{equation}
+	c(\phi_1, \phi_2) = r(\phi_1, \phi_2) h(\phi_1, \phi_2)
+\end{equation}
+The effective number of crossings of the four sides at the courners of the plaquett is
+\begin{equation}
+	c(\phi_1, \phi_2) + c(\phi_2, \phi_3) + c(\phi_3, \phi_4) + c(\phi_4, \phi_1).
+\end{equation}
+This value has to be exactly 2 for the plaquett to constain a string core.
+
+\subsection{String Length Parameter}
 We define the string length per Hubble volume as
 \begin{equation}
-    \zeta \equiv \lim_{V \to \infty} \frac{l}{vol(V)} t^2
+    \xi \equiv \lim_{V \to \infty} \frac{l}{vol(V)} t^2
 \end{equation}
 where $l$ is the total length of strings within $V$.
 
+After identifiying strings we sum the distance between neighboring points on each string. Hence the string length parameter is given as 
+\begin{equation}
+	\xi = \frac{a(t) l \Delta x}{a^3(t) L^3} t^2
+\end{equation}
+
+\subsection{String Velocity}
+We use the algorithm of \cite[appendix A.2, eq. A.10]{axion_dark_matter_strings_and_their_cores}.
+It is given as
+\begin{equation}
+	\gamma^2 v^2 = \frac{\dot{\phi} \dot{\phi}'}{c^2} \left(1 + \frac{|\phi|^2}{8 c^2} \right) + \frac{\phi' \dot{\phi} + \phi \dot{\phi}')^2}{16 c^4}
+\end{equation}
 
 \newpage
 \printbibliography
