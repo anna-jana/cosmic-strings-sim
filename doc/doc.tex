@@ -385,6 +385,96 @@ It is given as
 	\gamma^2 v^2 = \frac{\dot{\phi} \dot{\phi}'}{c^2} \left(1 + \frac{|\phi|^2}{8 c^2} \right) + \frac{\phi' \dot{\phi} + \phi \dot{\phi}')^2}{16 c^4}
 \end{equation}
 
+\newpage 
+\section{The String Solution}
+
+The Ansatz for a straight string is
+\begin{equation}
+	\psi = f(r) e^{\alpha}
+\end{equation}
+where we work in cylindrical coordinates (the string is along the z-axis, $\alpha$ is the angle around the z-axis and $r$ is the distance to the z-axis).
+Here $f$ has to solve the time-independent equation of motion
+????
+
+\begin{equation}
+	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}
+\end{equation}
+
+\newpage
+\section{Number Density Extrapolation}
+
+The evolution of the energy density of strings $\rho_\mathrm{strings}$
+and of free axions $\rho_\mathrm{axions}$ is given by
+\begin{equation}
+	\dot{\rho}_\mathrm{strings} + 2 H \rho_\mathrm{strings} = - \Gamma
+\end{equation}
+and
+\begin{equation}
+	\dot{\rho}_\mathrm{axions} + 4 H \rho_\mathrm{axions} = + \Gamma
+\end{equation}
+respectively.
+Here $\Gamma$ is the rate of emission of axions from the string network.
+Here we made the approximation that no energy is released into the heavy radial modes. 
+
+The energy density of strings can be approximately computed from their length and energy per unit length as
+\begin{equation}
+	\rho_\mathrm{strings} = \mu \times l = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}} \frac{\xi}{t^2}
+\end{equation}
+
+This allows us to compute the rate $Gamma$ as 
+\begin{equation}
+	\Gamma = 2 \pi f_a^2 \frac{\xi}{t^3} \left( \log \frac{m_r \gamma}{H \sqrt{\xi}} - 1  \right)
+\end{equation}
+
+Now we want to find the number density of axions.
+\begin{equation}
+	n_\mathrm{axion}(t) = \int \mathrm{d} k \frac{P(k)}{k} 
+\end{equation}
+where $k$ is the physical momentum which is related to the comoving as $k_\mathrm{physical} = k_\mathrm{comoving} / a(t)$.
+We want to relate this to the rate $\Gamma$ and a shape of the spectrum $P(k)$.
+For later reference we also express the axion energy density in term of the spectrum $P(k)$
+\begin{equation}
+	\rho_\mathrm{axion}  = \int \mathrm{d} k P(k)
+\end{equation}
+DANGER: there are potentially factors of $2\pi$ or so from the definition of $P(k)$ somewhere 
+\subsection{Gorghetto}
+
+\subsection{Kawasaki}
+The energy in a comoving volume is
+\begin{equation}
+	E(t) = a(t)^4 \rho_\mathrm{axion}(t)
+\end{equation}
+The number density in a comoving volume is
+\begin{equation}
+	N(t) = a(t)^3 n_\mathrm{axion}
+\end{equation}
+
+\begin{equation}
+	\dot{E}(t) = R^4(t) \Gamma(t)
+\end{equation}
+
+\begin{equation}
+	N(t) = \int \mathrm{d} t \frac{\mathrm{d} N}{\mathrm{d} t} = \int \mathrm{d} t \frac{\mathrm{d} E}{\mathrm{d} t} \frac{\frac{\mathrm{d} N}{\mathrm{d} t}}{\frac{\mathrm{d} E}{\mathrm{d} t}}
+\end{equation}
+
+In the Kawasaki paper \cite{improved_estimation_hiramatsu} they use 
+\begin{equation}
+	\frac{\frac{\mathrm{d} N}{\mathrm{d} t}}{\frac{\mathrm{d} E}{\mathrm{d} t}} =: \overline{k^{-1}}(t)
+\end{equation}
+as the characteristic parameter of the spectrum.
+
+
+Lets compute the relationship between the Gorghettos spectral index $q$ and this inverse momentum scale $\overline{k^{-1}}$.
+
+
+
+
+
+
+
+
+
+
 \newpage
 \printbibliography
 
