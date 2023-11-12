@@ -7,6 +7,7 @@ using LinearAlgebra
 using PyPlot
 using DelimitedFiles
 using Interpolations
+using Polynomials
 using Statistics
 using MPI
 using PencilArrays

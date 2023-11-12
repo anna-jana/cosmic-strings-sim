@@ -21,6 +21,7 @@ ntimes = 50
 every = div(p.nsteps, ntimes)
 
 do_spectra = true
+save_strings = true
 
 for i in 1:p.nsteps
     println("$i of $(p.nsteps)")
@@ -28,7 +29,9 @@ for i in 1:p.nsteps
         println("computing strings and energies...")
         strs, mean_v, mean_v2, mean_gamma = AxionStrings.detect_strings(s, p)
         push!(velocities, (s.tau, mean_v, mean_v2, mean_gamma))
-        push!(strings, (s.tau, strs))
+        if save_strings
+            push!(strings, (s.tau, strs))
+        end
         push!(string_lengths, (s.tau, AxionStrings.total_string_length(s, p, strs)))
         push!(energies, (s.tau, AxionStrings.compute_energy(s, p)...))
         println("done")
@@ -48,7 +51,9 @@ println("writing data files")
 writedlm("string_length.dat", string_lengths)
 writedlm("energies.dat", energies)
 writedlm("velocities.dat", velocities)
-write("strings.json", json(strings))
+if save_strings
+    write("strings.json", json(strings))
+end
 println("done")
 
 if do_spectra
