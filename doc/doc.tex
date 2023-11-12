@@ -406,10 +406,12 @@ Here $f$ has to solve the time-independent equation of motion
 The evolution of the energy density of strings $\rho_\mathrm{strings}$
 and of free axions $\rho_\mathrm{axions}$ is given by
 \begin{equation}
+	\label{eq:string_energy_eom}
 	\dot{\rho}_\mathrm{strings} + 2 H \rho_\mathrm{strings} = - \Gamma
 \end{equation}
 and
 \begin{equation}
+	\label{eq:axion_energy_eom}
 	\dot{\rho}_\mathrm{axions} + 4 H \rho_\mathrm{axions} = + \Gamma
 \end{equation}
 respectively.
@@ -428,6 +430,7 @@ This allows us to compute the rate $\Gamma$ as
 
 Now we want to find the number density of axions.
 \begin{equation}
+	\label{eq:number_density_from_spectrum}
 	n_\mathrm{axion}(t) = \int \mathrm{d} k \frac{P(k)}{k} 
 \end{equation}
 where $k$ is the physical momentum which is related to the comoving as $k_\mathrm{physical} = k_\mathrm{comoving} / a(t)$.
@@ -437,33 +440,60 @@ For later reference we also express the axion energy density in term of the spec
 	\rho_\mathrm{axion}  = \int \mathrm{d} k P(k)
 \end{equation}
 DANGER: there are potentially factors of $2\pi$ or so from the definition of $P(k)$ somewhere 
-\subsection{Gorghetto}
-We change the presentation of the formalism by Gorghetto (the following formula is a definition for us but is a consequence in the Gorghetto paper)
-\begin{equation}
-	F[x = k / H, y = m_r / H] = A / a^3 \frac{\partial}{\partial t} \left( a^3 \frac{\partial \rho_a}{\partial k} \right)
-\end{equation}
-where $A$ is choosen such that 
-\begin{equation}
-	\int \mathrm{d} x F[x, y] = 1
-\end{equation}
-Hence the 
+DANGER: gorghetto has physical momenta and hirmatsu/kawasaki comoving!!!!
 
-\subsection{Kawasaki}
+\subsection{The Instantaneous Emission Spectrum (Gorghetto)}
+First lets use the Ansatz by Gorghetto. 
+We change the presentation of the formalism by Gorghetto (the following formula is a definition for us but is a consequence in the Gorghetto paper).
+They define the instantaneous emission spectrum $F[x,y]$ as
+\begin{equation}
+	\label{eq:F_def}
+	F[x = k' / H = a/a' k / H, y = m_r / H] = \frac{H}{\Gamma} \frac{1}{a^3} \frac{\partial}{\partial t} \left( a^3 \frac{\partial \rho_a}{\partial k a / a'} \right)
+\end{equation}
+$F$ is normalized to 1:
+\begin{align}
+	\int \mathrm{d} k F[a/a'k/H, m_r/H] &= \frac{H}{\Gamma} \frac{1}{a^3} \frac{1}{H} \frac{\partial}{\partial t} a^3 \int \mathrm{d} k \frac{\partial \rho_a}{\partial k a / a'} \\
+	&= \frac{1}{\Gamma} \frac{1}{a^4} \frac{\partial}{\partial t} a'^4 \rho_a \\
+	&= \frac{1}{\Gamma} \frac{1}{a^4} (3 \dot{a} a^2 \rho_a + a^3 \dot{\rho_a}) \\
+	&= \frac{1}{\Gamma} \frac{1}{a^4} a^4 (3 H \rho_a + \dot{\rho_a}) \\
+	&= \frac{1}{\Gamma} (4 H \rho_a - 4 H \rho_a + \Gamma) \\
+	&= \frac{1}{\Gamma} \Gamma \\
+	&= 1
+\end{align}
+This is a bit weird with the $a$ and $a'$ buissness.
+Technically does $k$ depend on $t$ so we can't switch the time-derivative and the k-integral.
+Maybe we could write this more clearly.
+
+We can straight forwardly integrate the spectrum using eq. \eqref{eq:number_density_from_spectrum}  and use the expression in eq. \eqref{eq:F_def} to find the number density in terms of the instantaneous emission spectrum:
+\begin{align}
+	\label{eq:number_density_from_F}
+	n_a(t) &= \int \frac{\mathrm{d} k}{k} \frac{\partial \rho_a}{\partial k} \\
+	&= \int \mathrm{d} t' \frac{\Gamma(t')}{H(t')} \left(\frac{R(t')}{R(t)}\right)^3 \int \frac{\mathrm{d} k}{k} F\left[\frac{kR(t)}{H(t')R(t')}, \frac{m_r}{H}\right]
+\end{align}
+
+\subsection{Comparision with Hiramatsu and Kawasaki Formalism}
+Now we compare this to the formalism by the Hiramatsu group:
 The energy in a comoving volume is
 \begin{equation}
 	E(t) = a(t)^4 \rho_\mathrm{axion}(t)
 \end{equation}
 The number density in a comoving volume is
 \begin{equation}
-	N(t) = a(t)^3 n_\mathrm{axion}
+	N(t) = a(t)^3 n_\mathrm{axion}.
 \end{equation}
 
+First of all their defintions lead to the same result:
+\begin{align}
+	\label{eq:hiramatsu_is_the_same_as_gorghetto}
+	R(t)^3 n_a(t) = N(t) &= \int \partial_t' N(t) = \int \partial_t' \left( R(t')^3 \int \frac{\mathrm{d} k}{k} \frac{\partial \rho_a}{k} \right) \\
+	&= \int \mathrm{d} t' \int \frac{\mathrm{d} k}{k} \frac{\partial \rho_a}{k} \\
+	&= \int \mathrm{d} t' \frac{\Gamma(t')}{H(t')} R(t')^3 \int \frac{\mathrm{d} k}{k} F\left[\frac{ka(t)}{H(t')a(t')}, \frac{m_r}{H}\right]
+\end{align}
+
+Now we use their formalism.
+Using the definition of $E(t)$ we can rewrite the eom for the axion energy density eq. \eqref{eq:axion_energy_eom} as 
 \begin{equation}
 	\dot{E}(t) = R^4(t) \Gamma(t)
-\end{equation}
-
-\begin{equation}
-	N(t) = \int \mathrm{d} t \frac{\mathrm{d} N}{\mathrm{d} t} = \int \mathrm{d} t \frac{\mathrm{d} E}{\mathrm{d} t} \frac{\frac{\mathrm{d} N}{\mathrm{d} t}}{\frac{\mathrm{d} E}{\mathrm{d} t}}
 \end{equation}
 
 In the Kawasaki paper \cite{improved_estimation_hiramatsu} they use 
@@ -471,18 +501,70 @@ In the Kawasaki paper \cite{improved_estimation_hiramatsu} they use
 	\frac{\frac{\mathrm{d} N}{\mathrm{d} t}}{\frac{\mathrm{d} E}{\mathrm{d} t}} =: \overline{k^{-1}}(t)
 \end{equation}
 as the characteristic parameter of the spectrum.
+For this they write 
+\begin{align}
+	n_a(t) R(t)^3 &= N(t) = \int \mathrm{d} t' \dot{N} = \int \mathrm{d} t' \dot{E} \frac{\dot{N}}{\dot{E}} \\
+	&= \int \mathrm{d} t' R^4(t) \Gamma(t) \frac{\dot{N}}{\dot{E}}
+\end{align}
+By comparing this equation with eq. \eqref{eq:hiramatsu_is_the_same_as_gorghetto} we find:
+\begin{equation}
+	R(t) \overline{k^{-1}}(t) = \int \frac{\mathrm{d} k}{k} \frac{F[k/H, m_r/H]}{H}
+\end{equation}
 
+\subsection{Computing the Number Density}
+We can now compute the number density using eq. \eqref{eq:number_density_from_F}.
+This is useful because we can find an Ansatz for the instantaneous emission spectrum $F[x, y]$.
+We assume that this is a single power law $q$ with cutoffs in the UV at $x = x_0$ and in the IR at the Hubble scale $y = m_r/H$
+\begin{equation}
+	F[x, y] \sim \left(\frac{x_0}{x}\right)^q \Theta(x - x_0) \Theta(y - x)
+\end{equation}
+We know already that $F[x,y]$ is normalized in $x$ to 1. Let us compute the normalization
+\begin{align}
+	\int_{x_0}^{y} \mathrm{d} x \left(\frac{x_0}{x}\right)^q &= x_0^q \frac{x^{-q + 1}}{-q + 1}\Big|_{x_0}^y \\
+	&= \frac{x_0^q}{1 - q}(y^{1 - q} - x_0^{1 - q}) = \frac{x_0}{q - 1} (1 - (x_0/y)^{q - 1})
+\end{align}
+Hence we find our normalized Ansatz for the spectrum
+\begin{equation}
+	F[x, y] = \frac{1 - q}{x_0(1 - (x_0/y)^{q - 1})} \left(\frac{x_0}{x}\right)^q \Theta(x - x_0). \Theta(y - x)
+\end{equation}
 
-Lets compute the relationship between the Gorghettos spectral index $q$ and this inverse momentum scale $\overline{k^{-1}}$.
+We start by computing the momentum integral 
+\begin{align}
+	\int \frac{\mathrm{d} x}{x} \frac{F[x, y]}{H} &= 
+	\int_{x_0}^{m_r/H} \frac{\mathrm{d} x}{x} \frac{q - 1}{1 - \left(\frac{x_0}{m_r/H}\right)^{q - 1}} \frac{1}{x_0} \left( \frac{x_0}{x} \right)^q \frac{1}{H} \\
+	&=   \frac{q - 1}{1 - \left(\frac{x_0}{m_r/H}\right)^{q - 1}} \frac{1}{x_0 H} x_o^q \int_{x_0}^{m_r/H} \mathrm{d} x x^{-q - 1} \\
+	&= \frac{q - 1}{1 - \left(\frac{x_0}{m_r/H}\right)^{q - 1}} \frac{1}{x_0 H} x_o^q \frac{1}{q} \left( x_0^{-q} - \left( \frac{H}{m_r}\right)^q \right) \\
+	&= \frac{1 - q^{-1}}{m_r} \frac{\left(\frac{m_r}{H x_0}\right)}{1 - \left(\frac{m_r}{H x_0}\right)^{1 - q}} \left( 1 - \left(\frac{m_r}{H x_0}\right)^{-q} \right) \\
+	&= \frac{1 - q^{-1}}{m_r} \frac{e^l}{1 - e^{(1 - q) l}} (1 - e^{-ql})
+\end{align}
+where
+\begin{equation}
+	l = \log \left( \frac{m_r}{x_0 H} \right)
+\end{equation}
 
+Next we turn to the time integration. For this we plug the previous result into \eqref{eq:number_density_from_F} and use the formulas for the rate $\Gamma$ and the string tension $\mu$
+\begin{align}
+	n_a(t) = \left( \frac{x_0}{2 m_r} \right)^{-3/2} e^{-3/2 l_\mathrm{max}} \xi \int_{-\infty}^{l_\mathrm{max}} \mathrm{d} l \xi \, \frac{e^l x_0}{2 m_r} \pi f_a^2 l  \left( \frac{x_0}{2 m_r} \right)^{-3/2} e^{-3/2 l} \frac{1 - q^{-1}}{m_r} \frac{e^l}{1 - e^{(1 - q) l}} (1 - e^{-ql})
+\end{align}
+Here we used 
+\begin{align}
+	t &= \frac{x_0 e^l}{2 m_r} \\
+	H  &= \frac{e^{l} m_r}{x_0} \\
+	\mathrm{d} t &= \frac{e^l x_0}{2 m_r} \mathrm{d} l \\
+	R(t) &= \sqrt{t} \\
+	R(t)^3 / t^3 &= 1 / t^{3/2}
+\end{align}
+as well as that $\xi$ is approximatly constant (we could do the computation also with a non constant $\xi$).
 
-
-
-
-
-
-
-
+Finally we divide by 
+\begin{equation}
+	B = \frac{8 H \xi(t) \mu(t)}{x_0}
+\end{equation}
+to remove dimensions and the major time-dependence 
+and obtain the function $f$
+\begin{equation}
+	f(q, l_\mathrm{max}) = n_a(t) / B(t) = \frac{1}{2} (1 - q^{-1}) \frac{e^{- \frac{1}{2} l_\mathrm{max}}}{l_\mathrm{max}} \int_{-\infty}^{l_\mathrm{max}} \mathrm{d} l \, l \frac{e^{l/2}}{1 - e^{(1 - q) l}} (1 - e^{-ql})
+\end{equation}
 
 \newpage
 \printbibliography
