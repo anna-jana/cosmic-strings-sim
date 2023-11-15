@@ -87,6 +87,7 @@ In comoving coordinates in the equation of motion the nabal is to be replaced $\
     (\nabla f)_i = \frac{\partial f}{\partial x_i} = \frac{\partial f}{\partial a(t) x_{\mathrm{comoving}, i}} = (\tilde{\nabla} f)_i / a^2(t)
 \end{equation}
 
+\subsection{Equations of Motion for Numerical Simulation}
 % \begin{equation}
 %     \ddot{\phi} + 3 H \dot{\phi} - \nabla^2 \phi + \phi m_r^2 \left( \frac{|\phi|^2}{f_a^2} - \frac{1}{2} \right) = 0
 % \end{equation}
@@ -554,7 +555,7 @@ Here we used
 	R(t) &= \sqrt{t} \\
 	R(t)^3 / t^3 &= 1 / t^{3/2}
 \end{align}
-as well as that $\xi$ is approximatly constant (we could do the computation also with a non constant $\xi$).
+as well as that $\xi$ is approximately constant (we could do the computation also with a non constant $\xi$).
 
 Finally we divide by 
 \begin{equation}
@@ -565,6 +566,65 @@ and obtain the function $f$
 \begin{equation}
 	f(q, l_\mathrm{max}) = n_a(t) / B(t) = \frac{1}{2} (1 - q^{-1}) \frac{e^{- \frac{1}{2} l_\mathrm{max}}}{l_\mathrm{max}} \int_{-\infty}^{l_\mathrm{max}} \mathrm{d} l \, l \frac{e^{l/2}}{1 - e^{(1 - q) l}} (1 - e^{-ql})
 \end{equation}
+
+\section{Effective Field Theory}
+We goal is to not tread the strings directly in field theory as this requires a lattice spacing such that the 
+string cores are resolved but to tread them as objects in them self and model their interaction with the axion field.
+The heavy radial modes are neglected in this approach. 
+
+\subsection{2D Case}
+We use the electromagnetic dual description of a shift-invariant (angular) real scalar field (in this case $\theta$).
+This is based on the fact that a shift-symmetric real scalar is dual to an antisymmetric (rank 2) tensor field.
+The asymmetric field is the field strength tensor in the electromagnetic theory.
+This approach comes from \cite{pinning_down_the_axion_DABHOLKAR1990815} but we use the formalism from \cite{Axion2D_Fleury:2016xrz} which includes a numerical implementation although it is only 2D.
+
+We define the field strength for the dual EM-theory as
+\begin{equation}
+	F_{\mu \nu} \equiv - f_a \epsilon_{\mu \nu \alpha} \partial^\alpha \theta
+\end{equation}
+
+The components of the field strength tensor are the 2D electric field
+\begin{equation}
+	E_i = F_{i,0} = - f_a \epsilon_{i 0 \alpha} \partial^\alpha \theta = - f_a \epsilon_{i j} \partial^j \theta
+\end{equation}
+\begin{equation}
+	\vec{E} = f_a \begin{pmatrix}
+		-\partial_y \theta \\
+		+\partial_x \theta
+	\end{pmatrix}
+\end{equation}
+and the magnetic field 
+\begin{equation}
+	B = F_{1,2} = - f_a \epsilon_{1 2 \alpha} \partial^\alpha \theta = - f_a \partial^0 \theta = f_a \partial_t \theta.
+\end{equation}
+The equation of motion far away from the string cores are the vacuum Maxwell's equations
+\begin{align}
+	&\partial_\mu F^{\mu \nu} = 0 \\
+	&\epsilon_{\mu \nu \alpha} \partial^\alpha F^{\mu \nu} = 0
+\end{align}
+The first is the inhomogenous (which is homogenous here bc. we are considering the field away from the strings) Maxwell equation. It holds bc. of antisymmetry of the field strength tensor:
+\begin{equation}
+	\partial_\mu F^{\mu \nu} =  - f_a \partial_\mu  \epsilon_{\mu \nu \alpha} \partial^\alpha \theta
+	=  - f_a  \underbrace{\epsilon_{\mu \nu \alpha}}_{\mathrm{anti-symmetric}} \underbrace{\partial_\mu \partial^\alpha \theta}_{\mathrm{symmetric}} = 0
+\end{equation}
+The second is the homogeneous Maxwell equation. It hols bc. of the eom. for $\theta$:
+\begin{equation}
+	\epsilon_{\mu \nu \alpha} \partial^\alpha F^{\mu \nu} = - f_a \epsilon_{\mu \nu \alpha} \partial^\alpha \epsilon^{\mu \nu \beta} \partial_\beta \theta
+	= - f_a \underbrace{\epsilon_{\mu \nu \alpha} \epsilon^{\mu \nu \beta}}_{= -2 \delta_{\alpha \beta}} \partial^\alpha \partial_\beta \theta = \partial_\alpha \partial^\alpha \theta = 0.
+\end{equation}
+
+What about the string cores?
+If we integrate the electric field around a closed loop we should get the electric charge contained within the loop.
+Lets do this for a loop containing a string core.
+\begin{equation}
+	\oint_\mathcal{C} \vec{E} \cdot \hat{n} \, \mathrm{d} l = \oint_\mathcal{C} \epsilon_{i j} E_i \mathrm{d} x_j = - f_a \oint_\mathcal{C} \underbrace{\epsilon_{i j}  \epsilon_{i k}}_{- \delta_{j k}} \partial^k \theta \mathrm{d} x_j =  f_a \oint_\mathcal{C} \partial_i \theta \mathrm{d}x^i = 2 \pi f_a
+\end{equation}
+Hence we see that the charge of a string is $2 \pi f_a$.
+
+Now we need to modify the equations of motion (i.e. either Maxwells equation for $F_{\mu \nu}$ or the wave equation for $\theta$)
+
+
+
 
 \newpage
 \printbibliography
