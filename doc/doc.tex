@@ -10,6 +10,11 @@
 \bibliography{refs}
 
 \begin{document}
+	
+\title{Axionic Topological Cosmic Strings}
+\author{Anna-Jana Riess}
+
+\maketitle
 
 \section{Background Cosmology}
 Using the metric
@@ -176,6 +181,70 @@ and denote the spacial derivative with respect to the comoving coordinates by $\
     \phi_\mathrm{physical} = f_a \psi / a(t)
 \end{equation}
 
+\subsection{Scale Separation}
+In this problem we have two different scales. 
+The first one is the size of the string cores $1/m_r$ and the second the Hubble scale $1/H$.
+Both are needed to be resolved in the numerical simulation.
+Hence the box size has to be at least one Hubble patch at the end of the simulation.
+Also the grid spacing has to be at most $1/m_r$ at the end of simulation.
+This means that $L = 1 / H(\tau_\mathrm{end})$ and $a(\tau_\mathrm{end)}) \Delta x = 1/m_r$.
+These scales are separated by multiple orders of magnitude. It is characterised by 
+\begin{equation}
+	\kappa = \log(m_r / H).
+\end{equation} 
+The number of gridpoints required can be compute from $N = L / \Delta x = a(\tau_\mathrm{end}) m_r / H(\tau_\mathrm{end}) = a(\tau_\mathrm{end})e^{\kappa}$.
+TODO: is there also a scale factor in the expression for the Hubble scale (such that they chancel in the end)??????
+The physical scale to which we have to simulate the system is given by the time where the axion mass turns on i.e.
+\begin{equation}
+	H \simeq m_a \approx \min \left[ \sqrt{\alpha_1}, \sqrt{\alpha_2} \left( \frac{T}{\Lambda} \right)^{-n/2} \right] \frac{f_a}{\Lambda^2}
+\end{equation}
+where we have $f_a \sim m_r$.
+
+
+
+\begin{equation}
+	m_r / H \sim \frac{1}{\sqrt{\alpha_2}} \left( \frac{T}{\Lambda} \right)^{n/2} \Lambda^2
+\end{equation}
+
+\section{Numerical Methods}
+
+\subsection{Spacial Derivatives}
+We discretise the field in a box $L^3$ on a lattice with $N^3$ grid points. 
+The lattice-spacing is $\Delta x = L / N$ in each direction. 
+Note that its $L / N$ not $L / (N - 1)$ because we have periodic boundaries.
+The spacial derivatives are evaludated using finite differences to second order in $\Delta x$.
+The first derivative (needed for the energy computation)
+\begin{equation}
+	\frac{\partial A_{ijk}}{\partial x_1} \approx \frac{A_{i + 1,j,k} - A_{i - 1,j,k}}{2\Delta x}
+\end{equation}
+The second derivative (needed in the eom)
+\begin{equation}
+	\frac{\partial^2 A_{ijk}}{\partial x_1^2} \approx \frac{A_{i + 1,j,k} - 2 A_{ijk} + A_{i - 1,j,k}}{\Delta x^2}
+\end{equation}
+The derivatives are defined in analogous ways in each direction.
+Note that we are using periodic boundary conditions i.e.  all indices are modulo N.
+
+
+\subsection{Time Integration}
+For the time integration we use a velocity verlet type method.
+The momenta are the derivative of the field with respect to the conformal time
+\begin{equation}
+	\pi = \partial_\tau \psi
+\end{equation} 
+Then the eom reads
+\begin{align}
+	\psi' &= \pi \\
+	\pi'  &= + \tilde{\nabla}^2 \psi - \psi ( |\psi|^2 - \frac{a^2}{2} ) \equiv f(\psi).
+\end{align}
+For this we can use the following update-scheme (velocity verlet):
+\begin{align}
+	&f^n \leftarrow f(\psi^n, t) \\
+	&\psi^{n + 1} \leftarrow \psi^n + \Delta t \, \pi^n + \frac{1}{2} \Delta t^2 f^n \\
+	&f^{n + 1} \leftarrow f(\psi^{n + 1}, t + \Delta t) \\
+	&\pi^{n + 1} \leftarrow \pi^n + \Delta t \frac{f^n + f^{n + 1}}{2}.
+\end{align}
+
+
 \section{Energies}
 
 \subsection{Decomposition into Axion and Radial Mode}
@@ -299,6 +368,7 @@ potential:
 \newpage
 \section{Spectrum Estimation}
 
+
 We use the method described in \cite[sec. 3.2]{improved_estimation_hiramatsu}.
 
 \begin{equation}
@@ -312,6 +382,8 @@ We use the method described in \cite[sec. 3.2]{improved_estimation_hiramatsu}.
 \begin{equation}
     \tilde{P}(k) \equiv \frac{k^2}{V} \int \frac{d \Omega_k}{4\pi} \frac{1}{2} \left| \tilde{\dot{a}}( \vec{k} ) \right|^2
 \end{equation}
+
+\subsection{PPSE}
 
 \begin{equation}
     \hat{P}(k) \equiv \frac{k^2}{V} \int \frac{d k'}{2 \pi^2} M^{-1}(k, k') \tilde{P}(k')
@@ -374,7 +446,7 @@ We define the string length per Hubble volume as
 \end{equation}
 where $l$ is the total length of strings within $V$.
 
-After identifiying strings we sum the distance between neighboring points on each string. Hence the string length parameter is given as 
+After identifying strings we sum the distance between neighboring points on each string. Hence the string length parameter is given as 
 \begin{equation}
 	\xi = \frac{a(t) l \Delta x}{a^3(t) L^3} t^2
 \end{equation}
@@ -385,9 +457,8 @@ It is given as
 \begin{equation}
 	\gamma^2 v^2 = \frac{\dot{\phi} \dot{\phi}'}{c^2} \left(1 + \frac{|\phi|^2}{8 c^2} \right) + \frac{\phi' \dot{\phi} + \phi \dot{\phi}')^2}{16 c^4}
 \end{equation}
-
-\newpage 
-\section{The String Solution}
+ 
+\subsection{The String Solution}
 
 The Ansatz for a straight string is
 \begin{equation}
@@ -395,7 +466,7 @@ The Ansatz for a straight string is
 \end{equation}
 where we work in cylindrical coordinates (the string is along the z-axis, $\alpha$ is the angle around the z-axis and $r$ is the distance to the z-axis).
 Here $f$ has to solve the time-independent equation of motion
-????
+
 
 \begin{equation}
 	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}
@@ -621,7 +692,54 @@ Lets do this for a loop containing a string core.
 \end{equation}
 Hence we see that the charge of a string is $2 \pi f_a$.
 
-Now we need to modify the equations of motion (i.e. either Maxwells equation for $F_{\mu \nu}$ or the wave equation for $\theta$)
+We will smear the charges as this allows us to avoid unphysical behavior with regards to large $k$ moves which break Lorentz-invariance.
+The charge density at point $x$ is defined as
+\begin{equation}
+	\rho(x) = f_a \sum_i \pm g(|x - x_i|).
+\end{equation}
+Here the sign is the sign of the string charge (winding number, winding direction) and $x_i$ is the position of the ith string.
+The function $g$ is the charge distribution for a single string.
+It has the property that:
+\begin{equation}
+	\int \mathrm{d}^2 x g(x) = 2 \pi \int \mathrm{d} r \, r g(r) = 2\pi.
+\end{equation}
+and $g(r) = 0$ for $r > r_0$.
+We also define the integrated charge outside of radius $r$ as
+\begin{equation}
+	f(r) \equiv \int_r^\infty \mathrm{d} s \, s \, g(s).
+\end{equation}
+Moore uses in \cite{Axion2D_Fleury:2016xrz}
+\begin{align}
+	g(r) &= 4 (r_0^2 - r^2) / r^4 \\
+	f(r) &= (1 - r^2 / r_0^2)^2
+\end{align}
+for $r < r_0$.
+
+The current from a moving string is given as 
+\begin{equation}
+	\vec{j} = \sum_i \rho(|x - x_i|) \vec{v_i}
+\end{equation}
+where $\vec{v_i} = \frac{\mathrm{d} x_i}{\mathrm{d} t}$.
+
+Now we need to modify the equations of motion for $\theta$ such that the inhomogeous Maxwell equation 
+\begin{equation}
+	\partial_\mu F^{\mu \nu} = J^\nu
+\end{equation}
+holds.
+To achieve this, we introduce a "covariant" derivative
+\begin{equation}
+	\partial_\mu \to D_\mu = \partial_\mu + A_\mu
+\end{equation}
+where 
+\begin{equation}
+	A_\mu(x) = \sum_i \epsilon_{\mu \alpha \beta} \frac{v_i^\alpha r_i^\beta}{r^2} f(|x - x_i|)
+\end{equation}
+
+Moore notes that this expression corresponds to taking the derivative of a pure string configuration i.e.
+$A_\mu = f(r) \partial_\mu \theta_{\mathrm{string}}$.
+This means that adding the "covariant" derivative is just the same thing as adding the string configurations to the free axion field.
+
+
 
 
 
