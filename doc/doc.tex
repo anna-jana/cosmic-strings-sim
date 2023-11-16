@@ -27,7 +27,8 @@ and the Hubble parameter in the radiation domainted era ($\rho \sim a^{-4}$)
 \end{equation}
 $a$ is the scale factor obeying the Friedmann equation
 \begin{equation}
-    2 M_\mathrm{pl}^2 H^2 = \rho_\mathrm{total} = \frac{\pi^2}{30} g_* T^4
+	\label{eq:friedmann_radiation}
+    3 M_\mathrm{pl}^2 H^2 = \rho_\mathrm{total} = \frac{\pi^2}{30} g_* T^4
 \end{equation}
 
 Define the conformal time $\tau$ such that:
@@ -199,12 +200,23 @@ The physical scale to which we have to simulate the system is given by the time 
 	H \simeq m_a \approx \min \left[ \sqrt{\alpha_1}, \sqrt{\alpha_2} \left( \frac{T}{\Lambda} \right)^{-n/2} \right] \frac{f_a}{\Lambda^2}
 \end{equation}
 where we have $f_a \sim m_r$.
-
-
-
+Assuming the axion mass has the form
 \begin{equation}
-	m_r / H \sim \frac{1}{\sqrt{\alpha_2}} \left( \frac{T}{\Lambda} \right)^{n/2} \Lambda^2
+	m_a = \sqrt{\alpha} \left( \frac{T}{\Lambda} \right)^{-n/2} \frac{\Lambda^2}{f_a}.
 \end{equation}
+From this and the Friedmann equation for a radiation domainated universe  \eqref{eq:friedmann_radiation} we get 
+\begin{equation}
+	\log(m_r/H) \sim \log(f_a/H_\mathrm{osc})
+\end{equation}
+where 
+\begin{equation}
+	H_\mathrm{osc} = \left( \sqrt{\frac{g_*}{90}} \frac{\pi}{M_\mathrm{pl}} \right)^{\frac{n}{n + 4}} \Lambda^2 \alpha^{\frac{2}{n + 4}} f_a^{- \frac{4}{n + 4}}
+\end{equation}
+\begin{figure}[H]
+	\includegraphics[width=\textwidth]{../scale.pdf}
+	\caption{The scale seperation as a function of the axion decay constant}
+\end{figure}
+
 
 \section{Numerical Methods}
 
@@ -637,6 +649,11 @@ and obtain the function $f$
 \begin{equation}
 	f(q, l_\mathrm{max}) = n_a(t) / B(t) = \frac{1}{2} (1 - q^{-1}) \frac{e^{- \frac{1}{2} l_\mathrm{max}}}{l_\mathrm{max}} \int_{-\infty}^{l_\mathrm{max}} \mathrm{d} l \, l \frac{e^{l/2}}{1 - e^{(1 - q) l}} (1 - e^{-ql})
 \end{equation}
+
+\begin{figure}
+	\includegraphics[width=\textwidth]{../number_density.pdf}
+	\caption{The normalized number density as a function of spectral-index $q$ for $\log(m_r/H) = 70$.}
+\end{figure}
 
 \section{Effective Field Theory}
 We goal is to not tread the strings directly in field theory as this requires a lattice spacing such that the 
