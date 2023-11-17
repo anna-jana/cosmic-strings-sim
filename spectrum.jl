@@ -136,7 +136,7 @@ function compute_power_spectrum(p::Parameter, field, spheres, surface_element, b
     return spectrum
 end
 
-function compute_M(p::Parameter, W_fft, spheres, surface_element, bin_ks)
+function compute_M(p::Parameter, W_fft, spheres, surface_element)
     # compute M
     # M = 1 / (L^3)^2 * \int d \Omega / 4\pi d \Omega' / 4\pi |W(\vec{k} - \vec{k}')|^2
     # NOTE: this is the computationally most expensive part!
@@ -206,7 +206,7 @@ function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: 
 
     W_fft = FFTW.rfft(W)
 
-    M = compute_M(p, W_fft, spheres, surface_element, bin_ks)
+    M = compute_M(p, W_fft, spheres, surface_element)
 
     M_inv = inv(M)
 
