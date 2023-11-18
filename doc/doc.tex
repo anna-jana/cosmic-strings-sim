@@ -430,6 +430,55 @@ We define the instantaneous emission spectrum into axions as
 \newpage
 \section{Strings}
 
+
+\subsection{The String Solution}
+
+The Ansatz for a straight string is
+\begin{equation}
+	\phi = \frac{f_a}{\sqrt{2}} f(\rho) e^{\alpha}
+\end{equation}
+where we work in cylindrical coordinates (the string is along the z-axis, $\alpha$ is the angle around the z-axis and $\rho$ is the distance to the z-axis).
+The axion field is here $\theta = \alpha$.
+The radial mode need to solve the time-independent equation of motion in cylindrical coordinates:
+\begin{equation}
+	f'' + \frac{f'}{\rho} + \frac{f}{\rho^2} + \frac{\lambda f_a^2}{2} f (1 - f^2) = 0.
+\end{equation}
+This is derived using the laplacian in cylindrical coordinates 
+\begin{equation}
+	\nabla^2 f = \frac{1}{\rho} \partial_\rho (\rho \partial_\rho f) + \frac{1}{\rho^2}. \partial_\alpha^2 f + \partial_z^2 f
+\end{equation}
+The factor in front of the potential term can be removed by redefining the radial coordinate 
+as
+\begin{equation}
+	\rho \to \left( \frac{\lambda f_a^2}{2} \right)^{-1/2} \rho.
+\end{equation}
+To solve this equation numerically we use $u = \log(\rho)$, in order to remove coordinate singularities at $\rho = 0$, where the derivatives 
+read
+\begin{align}
+	\frac{\partial f}{\partial \rho} &= \frac{1}{\rho} \frac{\partial f}{\partial u} \\
+	\frac{\partial^2 f}{\partial \rho^2} &= - 2 \frac{1}{\rho^2} \frac{\partial f}{\partial u}  + \frac{1}{\rho^2} 	\frac{\partial^2 f}{\partial u^2} 
+\end{align}
+and the final equation turns out to be
+\begin{equation}
+	\frac{\partial^2 f}{\partial u^2} - \frac{\partial f}{\partial u} - f + e^{2u} f (1 - f^2) = 0
+\end{equation}
+The relationship between $f$ and the radial field is
+\begin{equation}
+	r = f_a (1 - f)
+\end{equation}
+
+\begin{figure}[H]
+	\includegraphics[width=\textwidth]{../string_solution.pdf}
+	\caption{Radial Mode profile for a single straight string}
+\end{figure}
+
+
+This solution has an associated energy per unit length which we obtain by integrating out the radial and angular directions.
+\begin{equation}
+	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}
+\end{equation}
+
+
 \subsection{String Identification}
 A plaquette in the grid contains a string iff the complex field $\phi$ wraps the fundamental domain once around the plaquette.
 This is equivalent to if it crosses the real axis with the same handedness twice.
@@ -468,20 +517,6 @@ We use the algorithm of \cite[appendix A.2, eq. A.10]{axion_dark_matter_strings_
 It is given as
 \begin{equation}
 	\gamma^2 v^2 = \frac{\dot{\phi} \dot{\phi}'}{c^2} \left(1 + \frac{|\phi|^2}{8 c^2} \right) + \frac{\phi' \dot{\phi} + \phi \dot{\phi}')^2}{16 c^4}
-\end{equation}
- 
-\subsection{The String Solution}
-
-The Ansatz for a straight string is
-\begin{equation}
-	\psi = f(r) e^{\alpha}
-\end{equation}
-where we work in cylindrical coordinates (the string is along the z-axis, $\alpha$ is the angle around the z-axis and $r$ is the distance to the z-axis).
-Here $f$ has to solve the time-independent equation of motion
-
-
-\begin{equation}
-	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}
 \end{equation}
 
 \newpage
