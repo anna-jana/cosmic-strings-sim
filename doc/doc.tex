@@ -441,7 +441,7 @@ where we work in cylindrical coordinates (the string is along the z-axis, $\alph
 The axion field is here $\theta = \alpha$.
 The radial mode need to solve the time-independent equation of motion in cylindrical coordinates:
 \begin{equation}
-	f'' + \frac{f'}{\rho} + \frac{f}{\rho^2} + \frac{\lambda f_a^2}{2} f (1 - f^2) = 0.
+	f'' + \frac{f'}{\rho} - \frac{f}{\rho^2} + \frac{\lambda f_a^2}{2} f (1 - f^2) = 0.
 \end{equation}
 This is derived using the laplacian in cylindrical coordinates 
 \begin{equation}
@@ -685,11 +685,13 @@ and obtain the function $f$
 	f(q, l_\mathrm{max}) = n_a(t) / B(t) = \frac{1}{2} (1 - q^{-1}) \frac{e^{- \frac{1}{2} l_\mathrm{max}}}{l_\mathrm{max}} \int_{-\infty}^{l_\mathrm{max}} \mathrm{d} l \, l \frac{e^{l/2}}{1 - e^{(1 - q) l}} (1 - e^{-ql})
 \end{equation}
 
-\begin{figure}
+\begin{figure}[H]
 	\includegraphics[width=\textwidth]{../number_density.pdf}
 	\caption{The normalized number density as a function of spectral-index $q$ for $\log(m_r/H) = 70$.}
 \end{figure}
 
+
+\newpage
 \section{Effective Field Theory}
 We goal is to not tread the strings directly in field theory as this requires a lattice spacing such that the 
 string cores are resolved but to tread them as objects in them self and model their interaction with the axion field.
