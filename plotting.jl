@@ -15,7 +15,7 @@ data = readdlm("energies.dat")
    radial_total, interaction, total) = tuple([data[:, i] for i in 1:size(data, 2)]...)
 logs = AxionStrings.tau_to_log.(tau)
 
-figure(figsize=(9, 3))
+figure(figsize=(9, 3), constrained_layout=true)
 plot(logs, axion_kinetic, color="tab:blue", ls=":", label="axion, kinetic")
 plot(logs, axion_gradient, color="tab:blue", ls="--", label="axion, gradient")
 plot(logs, axion_total, color="tab:blue", ls="-", label="axion")
