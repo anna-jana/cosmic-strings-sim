@@ -18,7 +18,7 @@ function hubble_at_temperature(T)
     return sqrt(g_star / 90) * pi / M_pl * T^2
 end
 
-function solve(f_a)
+function solve_scale(f_a)
     function goal(log_T)
         T = exp(log_T)
         return log(axion_mass_times_f_a(T) / f_a / hubble_at_temperature(T))
@@ -28,7 +28,7 @@ function solve(f_a)
 end
 
 f_a_list = @. 10^(8:12) * 1e3 # [MeV]
-T_osc = solve.(f_a_list) # [MeV]
+T_osc = solve_scale.(f_a_list) # [MeV]
 H_osc = hubble_at_temperature.(T_osc) # [MeV]
 H_osc_analytic = @. (
         (sqrt(g_star / 90) * pi / M_pl)^(n/(n + 4)) *
