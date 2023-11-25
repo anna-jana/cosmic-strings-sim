@@ -1,0 +1,6 @@
+include("run_single_node.jl")
+include("plot.jl")
+include("scale.jl")
+include("number_density.jl")
+include("string_solution.jl")
+run(`python string_solution_analytic.py`)

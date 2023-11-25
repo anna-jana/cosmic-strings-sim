@@ -16,6 +16,9 @@
 
 \maketitle
 
+\section{Introduction}
+Intro to solitons: \cite{tasi_solitons}
+
 \section{Background Cosmology}
 Using the metric
 \begin{equation}
@@ -441,6 +444,7 @@ where we work in cylindrical coordinates (the string is along the z-axis, $\alph
 The axion field is here $\theta = \alpha$.
 The radial mode need to solve the time-independent equation of motion in cylindrical coordinates:
 \begin{equation}
+	\label{eq:radial_eq}
 	f'' + \frac{f'}{\rho} - \frac{f}{\rho^2} + \frac{\lambda f_a^2}{2} f (1 - f^2) = 0.
 \end{equation}
 This is derived using the laplacian in cylindrical coordinates 
@@ -460,8 +464,9 @@ read
 \end{align}
 and the final equation turns out to be
 \begin{equation}
-	\frac{\partial^2 f}{\partial u^2} - \frac{\partial f}{\partial u} - f + e^{2u} f (1 - f^2) = 0
+	\frac{\partial^2 f}{\partial u^2} - \frac{\partial f}{\partial u} - f + e^{2u} f (1 - f^2) = 0.
 \end{equation}
+We solve this equation using the DifferentialEquations.jl suite in Julia.
 The relationship between $f$ and the radial field is
 \begin{equation}
 	r = f_a (1 - f)
@@ -471,6 +476,34 @@ The relationship between $f$ and the radial field is
 	\includegraphics[width=\textwidth]{../string_solution.pdf}
 	\caption{Radial Mode profile for a single straight string}
 \end{figure}
+
+We can find an approximate analytical solution for small $\rho$ by inserting a power-series Ansatz
+\begin{equation}
+	f(\rho) = 
+	a_0 + a_1 \rho + a_2 \rho^2/2 + a_3 \rho^3/6 + a_4 \rho^4/24 + a_5 \rho^5/120 + a_6 \rho^6/720	
+\end{equation}
+into equation \eqref{eq:radial_eq}.
+By comparing this order by order we find
+\begin{align}
+	&-a_0 = 0 \\
+	&0 = 0 \\
+	&3 a_2 = 0 \\
+	&6 a_1 + 8 a_3 = 0\\
+	&15a_4 = 0\\
+	&-120 a_1^3 - 15a_1 + 24a_5 = 0\\
+	&35 a_6 = 0.
+\end{align}
+Solving these equations for the coefficients we obtain the 
+solution
+\begin{equation}
+	f(\rho) = a_1\rho^5(a_1^2 + 1/8)/24 - a_1\rho^3/8 + a_1\rho.
+\end{equation}
+Note that the linear coefficient is left unspecified.
+This is because the boundary condition for the first derivative is not specified.
+It will be given by the boundary at $\rho \to \infty$. Possibly by matching the two solutions or using the numerical solution obtained above.
+
+
+
 
 
 This solution has an associated energy per unit length which we obtain by integrating out the radial and angular directions.
