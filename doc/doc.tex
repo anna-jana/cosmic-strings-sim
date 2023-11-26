@@ -467,6 +467,7 @@ and the final equation turns out to be
 	\frac{\partial^2 f}{\partial u^2} - \frac{\partial f}{\partial u} - f + e^{2u} f (1 - f^2) = 0.
 \end{equation}
 We solve this equation using the DifferentialEquations.jl suite in Julia.
+
 The relationship between $f$ and the radial field is
 \begin{equation}
 	r = f_a (1 - f)
@@ -502,10 +503,29 @@ Note that the linear coefficient is left unspecified.
 This is because the boundary condition for the first derivative is not specified.
 It will be given by the boundary at $\rho \to \infty$. Possibly by matching the two solutions or using the numerical solution obtained above.
 
+To solve the equation for large $\rho$ we perform a substitution $v = 1 / \rho$.
+This gives us the differential equation
+\begin{equation}
+	v^4 \frac{\partial^2 f}{\partial v^2} + 3 v^2 \frac{\partial f}{\partial v} - v^2 f + f (1 - f^2) = 0
+\end{equation}
+We again make a power-series Ansatz 
+\begin{equation}
+	f(v) =  b_0 + b_1v + b_2 v^2/2 + b_3 v^3/6
+\end{equation}
+This leads to the constraints 
+\begin{align}
+&-b_0^3 + b_0 = 0\\
+&-2*b_1 = 0\\
+&-2*b_2 - 2 = 0\\
+&-2*b_3 - 18 = 0
+\end{align}
+Demmainding that $f(v \to 0) = 1$ (boundary condition for $\rho \to \infty$) leads to the solution
+\begin{equation}
+	 f(\rho) = 1 - 1/(2\rho^2) - 3/(2\rho^3)
+\end{equation} 
+Note that while the approximation for large $\rho$ works good, the numerical convergence of the solution for small $\rho$ is very bad. Also its in parxis not possibile to just take $a_1$ to be the numerical derivative of the solution at $\rho = 0$. We have to take a value for some finite $\rho$. The numerical solution seems to have a vanishing derivative at zero. However we have the same solution as Moore et al. \cite[eq. A.6]{Axion2D_Fleury:2016xrz}.
 
-
-
-
+\subsection{String Tension}
 This solution has an associated energy per unit length which we obtain by integrating out the radial and angular directions.
 \begin{equation}
 	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}

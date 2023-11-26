@@ -1,6 +1,9 @@
 using DifferentialEquations
 using PyPlot
 
+solution_for_small_rho(x, c) = c*x^5*(c^2 + 1/8)/24 - c*x^3/8 + c*x
+solution_for_large_rho(x) = 1 - 1/(2*x^2) - 3/(2*x^3)
+
 function rhs!(dy, y, p, u)
     f, df = y
     dy[1] = df
@@ -22,15 +25,23 @@ npoints = 500
 problem = TwoPointBVProblem(rhs!, (bc_left!, bc_right!),
                             initial_guess, (u_min, u_max);
                             bcresid_prototype = (zeros(1), zeros(1)))
-solution = solve(problem, MIRK4(), dt = u_max / npoints)
+solution = solve(problem, MIRK4(), dt = u_max / npoints, reltol=1e-10, abstol=1e-10)
 rho = exp.(solution.t)
 f = solution[1, :]
-r_over_f_a = @. 1 - f
+
+# c should be the derivative at rho = 0 but this is difficult numerically
+base = 2500
+c = (f[2 + base] - f[1 + base]) / (rho[2 + base] - rho[1 + base])
 
 figure()
-plot(rho, r_over_f_a)
+plot(rho, @. 1 - f; label="numerical solution")
+ylims = ylim()
+plot(rho, @. 1 - solution_for_small_rho(rho, c); label=raw"approx. for small $\rho$")
+plot(rho, @. 1 - solution_for_large_rho(rho); label=raw"approx. for large $\rho$")
+ylim(ylims)
 xlabel(raw"radial distance to string $\rho$")
 ylabel(raw"dimensionless radial component $r / f_a$ of PQ field $\frac{r + f_a}{\sqrt{2}} e^{i \theta}$")
+legend()
 title("single string")
 savefig("string_solution.pdf")
 show()
