@@ -1,4 +1,5 @@
 # Simulation of Cosmic Topological Axion Strings
+Hobby project on simulation of cosmic strings
 
 ## Required software
 * Julia 1.9

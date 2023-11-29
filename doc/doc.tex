@@ -19,6 +19,11 @@
 \section{Introduction}
 Intro to solitons: \cite{tasi_solitons}
 
+\subsection{Literature}
+\subsubsection{Moore}
+\subsubsection{Hiramatsu}
+\subsubsection{Gorghetto}
+
 \section{Background Cosmology}
 Using the metric
 \begin{equation}
@@ -526,10 +531,22 @@ Demmainding that $f(v \to 0) = 1$ (boundary condition for $\rho \to \infty$) lea
 Note that while the approximation for large $\rho$ works good, the numerical convergence of the solution for small $\rho$ is very bad. Also its in parxis not possibile to just take $a_1$ to be the numerical derivative of the solution at $\rho = 0$. We have to take a value for some finite $\rho$. The numerical solution seems to have a vanishing derivative at zero. However we have the same solution as Moore et al. \cite[eq. A.6]{Axion2D_Fleury:2016xrz}.
 
 \subsection{String Tension}
-This solution has an associated energy per unit length which we obtain by integrating out the radial and angular directions.
+The solution for a single string has an associated energy per unit length which we obtain by integrating out the radial and angular directions.
+The dominant contribution is coming from the gradient energy of the angular (axion) field.
+
+\begin{equation}
+	\mu = \int \rho \mathrm{d} \rho \int \mathrm{d} \alpha ( V(\phi) + |\nabla \phi|^2 )
+\end{equation}
+
+
+
 \begin{equation}
 	\mu = \pi f_a^2 \log \frac{m_r \gamma}{H \sqrt{\xi}}
 \end{equation}
+
+
+
+
 
 
 \subsection{String Identification}
