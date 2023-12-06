@@ -59,7 +59,8 @@ const field_max = 1 / sqrt(2)
 
 function sim_params_from_physical_scale(log_end)
     L = 1 / log_to_H(log_end)
-    N = ceil(Int, L * tau_to_a(log_to_tau(log_end)))
+    # N = ceil(Int, L * tau_to_a(log_to_tau(log_end)))
+    N = ceil(Int, L)
     return L, N
 end
 
