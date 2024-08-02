@@ -8,7 +8,10 @@ p = AxionStrings.Parameter(2.0, 3.0, 1e-2, 42, 1.0, 20, 1)
 s = AxionStrings.SingleNodeState(p)
 
 # strs, mean_v, mean_v2, mean_gamma = AxionStrings.detect_strings(s, p)
-# wavenumber, power_ppse, power_uncorrected = AxionStrings.compute_spectrum_ppse(p, s, strs)
+# k, P1, P2 = AxionStrings.compute_spectrum_ppse(p, s, strs)
+# plot(k, P1; label="corrected")
+# plot(k, P2; label="uncorrected")
+# legend()
 
 write("parameter.json", json(p))
 

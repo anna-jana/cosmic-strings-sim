@@ -131,7 +131,7 @@ function compute_power_spectrum(p::Parameter, field, spheres, surface_element, b
             spectrum[i] += abs2(field_fft[ix, iy, iz])
         end
         spectrum[i] *= surface_element[i]
-        spectrum[i] *= bin_ks[i]^2 / p.L^3 / (4 * pi) * 0.5
+        spectrum[i] *= 1 / p.L^3 / (4 * pi)^2 * 0.5
     end
     return spectrum
 end
