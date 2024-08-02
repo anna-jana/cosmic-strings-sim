@@ -291,7 +291,7 @@ function compute_spectrum_autoscreen(p :: Parameter, s :: MPIState)
 
         if s.rank == s.root
             spectrum[i] *= surface_element[i]
-            spectrum[i] *= bin_ks[i]^2 / p.L^3 / (4 * pi) * 0.5
+            spectrum[i] *= 1 / p.L^3 / (4 * pi)^2 * 0.5
         end
     end
 
