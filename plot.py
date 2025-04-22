@@ -103,10 +103,7 @@ with open("parameter.json", "r") as f:
     nbins = p["nbins"]
     radius = p["radius"]
 
-data = np.readtxt("energies.dat")
-(tau, axion_kinetic, axion_gradient, axion_total,
-   radial_kinetic, radial_gradient, radial_potential,
-   radial_total, interaction, total) = data.T
+tau, axion_kinetic, axion_gradient, axion_total, radial_kinetic, radial_gradient, radial_potential, radial_total, interaction, total = np.loadtxt("energies.dat")
 logs = tau_to_log(tau)
 
 plt.figure(figsize=(9, 3), constrained_layout=True)
@@ -119,14 +116,6 @@ plt.plot(logs, radial_potential, color="tab:orange", ls="-.", label="radial, pot
 plt.plot(logs, radial_total, color="tab:orange", ls="-", label="radial")
 plt.plot(logs, interaction, color="tab:green", ls="-", label="interaction = strings")
 plt.plot(logs, total, color="black", ls="--", label="total energy density")
-# plot(logs, axion_kinetic ./ total, color="tab:blue", ls="-", label="axion, kinetic")
-# plot(logs, axion_gradient ./ total, color="tab:blue", ls="--", label="axion, gradient")
-# plot(logs, axion_total ./ total, color="tab:blue", ls="-", lw=2, label="axion")
-# plot(logs, radial_kinetic ./ total, color="tab:orange", ls="-", label="radial, kinetic")
-# plot(logs, radial_gradient ./ total, color="tab:orange", ls="--", label="radial, gradient")
-# plot(logs, radial_potential ./ total, color="tab:orange", ls=":", label="radial, potential")
-# plot(logs, radial_total ./ total, color="tab:orange", ls="-", lw=2, label="radial")
-# plot(logs, interaction ./ total, color="tab:green", ls="-", label="interaction axion and radial = strings")
 plt.yscale("log")
 plt.xlim(plt.xlim()[1], 4.15)
 plt.xlabel(r"$log(m_r / H)$")
@@ -140,8 +129,7 @@ plt.xlabel(r"$log(m_r / H)$")
 plt.ylabel(r"averaged interaction energy density $f_a^2 m_r^2$\n")
 plt.savefig("interaction_term.pdf")
 
-data = np.readtxt("velocities.dat")
-mean_v, mean_v2, mean_gamma = data[:, 1], data[:, 2], data[:, 3]
+mean_v, mean_v2, mean_gamma = = np.loadtxt("velocities.dat" )
 
 fig, axs = plt.subplots(3, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -156,8 +144,7 @@ axs[2].set_ylabel(r"$\langle \gamma \rangle$")
 
 plt.savefig("velocties.pdf")
 
-data = np.readtxt("string_length.dat")
-taus, zeta = data.T
+taus, zeta = np.loadtxt("string_length.dat")
 logs = tau_to_log(taus)
 
 plt.figure()
@@ -166,10 +153,8 @@ plt.xlabel(r"$\log(m_r / H)$")
 plt.ylabel(r"$\zeta = a l / a^3 L^3 \times t^2$")
 plt.savefig("string_length.pdf")
 
-data = np.readtxt("spectrum1.dat")
-k1, P1_ppse, P1_uncorrected, P1_screened = data[:, 1], data[:, 2], data[:, 3], data[:, 4]
-data = np.readtxt("spectrum2.dat")
-k2, P2_ppse, P2_uncorrected, P2_screened = data[:, 1], data[:, 2], data[:, 3], data[:, 4]
+k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack)
+k2, P2_ppse, P2_uncorrected, P2_screened = = np.loadtxt("spectrum2.dat")
 tau1 = p.Delta_tau * (p.nsteps - 1)
 tau2 = p.Delta_tau * p.nsteps
 
@@ -207,11 +192,6 @@ def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
 log_mid, ks, F_ppse = compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
 _, _, F_screened = compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
 
-#F_fit_ppse = fit(log.(ks[1:end-1]), log.(F_ppse[1:end-1]), 1)
-#F_fit_screened = fit(log.(ks[1:end-1]), log.(F_screened[1:end-1]), 1)
-#q_fit_ppse = -F_fit_ppse[1]
-#q_fit_screened = -F_fit_screened[1]
-
 def normalize(ks, xs):
     norm = np.sqrt(np.sum(xs**2) * (ks[1] - ks[0]))
     return xs / norm
@@ -234,8 +214,6 @@ plt.savefig("spectra.pdf")
 plt.figure()
 plt.loglog(ks, F_ppse, label="ppse, simulation at log=$log_mid")
 plt.loglog(ks, F_screened, label="screened, simulation at log=$log_mid")
-#plt.loglog(ks[1:end-1], np.exp(F_fit_ppse(log(ks[:-1]))), label=f"ppse, fit q = {q_fit_ppse}")
-#plt.loglog(ks[1:end-1], np.exp(F_fit_screened(log(ks[0:-1]))), label=f"screened, fit q = {e_fit_screened}")
 plt.xlabel("physical momentum |k|")
 plt.ylabel("F(k)")
 plt.title("instantaneous emission spectrum")
