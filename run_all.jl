@@ -1,6 +1,0 @@
-include("run_single_node.jl")
-include("plot.jl")
-run(`python string_solution.jl`)
-run(`python scale.py`)
-run(`python number_density.py`)
-run(`python string_solution_analytic.py`)
