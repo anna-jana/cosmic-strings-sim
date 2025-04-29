@@ -153,8 +153,10 @@ plt.xlabel(r"$\log(m_r / H)$")
 plt.ylabel(r"$\zeta = a l / a^3 L^3 \times t^2$")
 plt.savefig("string_length.pdf")
 
-k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack)
-k2, P2_ppse, P2_uncorrected, P2_screened = = np.loadtxt("spectrum2.dat")
+# k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack)
+# k2, P2_ppse, P2_uncorrected, P2_screened = = np.loadtxt("spectrum2.dat")
+k1, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
+k2, P2_screened = = np.loadtxt("spectrum2.dat", unpack=True)
 tau1 = p.Delta_tau * (p.nsteps - 1)
 tau2 = p.Delta_tau * p.nsteps
 

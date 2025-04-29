@@ -4,8 +4,6 @@ using FFTW
 using Random
 using StaticArrays
 using LinearAlgebra
-using DelimitedFiles
-using Statistics
 using MPI
 using PencilArrays
 using PencilFFTs
@@ -54,15 +52,13 @@ Base.@kwdef struct Parameter
 end
 
 function Parameter(log_start, log_end, Delta_tau, seed, k_max, nbins, radius)
-    Random.seed!(seed)
-
     L, N = sim_params_from_physical_scale(log_end)
 
     tau_start = log_to_tau(log_start)
     tau_end = log_to_tau(log_end)
     tau_span = tau_end - tau_start
 
-    p = Parameter(
+    return Parameter(
         log_start=log_start,
         log_end=log_end,
         L=L,
@@ -78,8 +74,6 @@ function Parameter(log_start, log_end, Delta_tau, seed, k_max, nbins, radius)
         nbins=nbins,
         radius=radius,
    )
-
-    return p
 end
 
 ######################################## initializing simulation ##########################################
@@ -124,11 +118,10 @@ struct FieldGenerator
 end
 
 function FieldGenerator(pen::Pencil, p::Parameter)
-    # transform = Transforms.RFFT()
+    Random.seed!(seed)
     transform = Transforms.FFT()
     plan = PencilFFTPlan(pen, transform)
     hat = allocate_output(plan)
-    # ks = AbstractFFTs.rfftfreq(p.N, 1 / p.dx) .* (2*pi)
     ks = AbstractFFTs.fftfreq(p.N, 1 / p.dx) .* (2 * pi)
     global_hat = global_view(hat)
     return FieldGenerator(plan, hat, global_hat, ks)
@@ -143,17 +136,12 @@ function random_field_mpi(field_generator::FieldGenerator, p::Parameter)
         ky = field_generator.ks[iy]
         kz = field_generator.ks[iz]
         k = sqrt(kx^2 + ky^2 + kz^2)
-        field_generator.global_hat[ix, iy, iz] =
-        # k <= p.k_max ? (rand()*2 - 1) * field_max : 0.0
-            complex(k <= p.k_max ? (rand() * 2 - 1) * field_max : 0.0)
+        field_generator.global_hat[ix, iy, iz] = k <= p.k_max ? field_max * rand() * exp(2*pi*1im * rand()) : zero(ComplexF64)
     end
 
     field = allocate_input(field_generator.plan)
 
     ldiv!(field, field_generator.plan, field_generator.hat)
-
-    # normalize to the local mean
-    # field ./= mean(abs, parent(field))
 
     return field
 end
@@ -183,6 +171,82 @@ Base.@kwdef mutable struct State
     root::Int
 end
 
+######################################### computing the rhs #######################################
+function exchange_field!(s::State)
+    for neighbor in s.neighbors
+        if neighbor.rank == s.rank
+            # no need for communication -> copy memory directly
+        else
+            # receive data from neighbor
+            receive = MPI.Irecv!(neighbor.receive_buffer,
+                                 s.comm;
+                                 source=neighbor.rank,
+                                 tag=neighbor.rank)
+            push!(s.requests, receive)
+
+            # slice of own data to send to neighbor
+            offx, offy, offz = neighbor.offset
+            to_send = @view s.psi[
+                get_send_index(offx, s.lnx),
+                get_send_index(offy, s.lny),
+                get_send_index(offz, s.lnz),
+            ]
+            send = MPI.Isend(to_send, s.comm; dest=neighbor.rank, tag=s.rank)
+            push!(s.requests, send)
+        end
+    end
+    MPI.Waitall(s.requests)
+
+    # assign received data to own subbox
+    for neighbor in s.neighbors
+        offx, offy, offz = neighbor.offset
+        ix = get_receive_index(offx, s.lnx)
+        iy = get_receive_index(offy, s.lny)
+        iz = get_receive_index(offz, s.lnz)
+        if neighbor.rank == s.rank
+            s.psi[ix, iy, iz] = @view s.psi[
+                get_send_index(offx, s.lnx),
+                get_send_index(offy, s.lny),
+                get_send_index(offz, s.lnz),
+            ]
+        else
+            s.psi[ix, iy, iz] = neighbor.receive_buffer
+        end
+    end
+
+    # reuse the rquests list for next time
+    empty!(s.requests)
+end
+
+function compute_force!(out::Array{Complex{Float64}, 3}, s::State, p::Parameter)
+    # exchange data with neighboring nodes/subboxes
+    # we need to exchange the psi field as we need to compute its
+    # laplacian for time propagation
+    exchange_field!(s)
+
+    a = tau_to_a(s.tau)
+    @inbounds for iz in 2:s.lnz
+        for iy in 2:s.lny
+            @simd for ix in 2:s.lnx
+                psi = s.psi[ix, iy, iz]
+                left = s.psi[ix + 1, iy, iz]
+                right = s.psi[ix - 1, iy, iz]
+                front = s.psi[ix, iy + 1, iz]
+                back = s.psi[ix, iy - 1, iz]
+                top = s.psi[ix, iy, iz + 1]
+                bottom = s.psi[ix, iy, iz - 1]
+                pot_force = psi * (abs2(psi) - 0.5*a)
+                laplace = (- 6 * psi + left + right + front + back + top + bottom) / p.dx^2
+                out[ix, iy, iz] = + laplace - pot_force
+            end
+        end
+    end
+
+    # syncronise all nodes
+    MPI.Barrier(s.comm)
+end
+
+###################################### initializing the simulation (cont.) ###############################
 function State(p::Parameter)
     # mpi setup
     MPI.Init()
@@ -321,81 +385,14 @@ function State(p::Parameter)
     return s
 end
 
+function finish_mpi!(_s::State)
+    _s # ignore
+    # clean up
+    MPI.Finalize()
+end
+
 ############################################# time stepping ######################################
-function exchange_field!(s::State)
-    for neighbor in s.neighbors
-        if neighbor.rank == s.rank
-            # no need for communication -> copy memory directly
-        else
-            # receive data from neighbor
-            receive = MPI.Irecv!(neighbor.receive_buffer,
-                                 s.comm;
-                                 source=neighbor.rank,
-                                 tag=neighbor.rank)
-            push!(s.requests, receive)
-
-            # slice of own data to send to neighbor
-            offx, offy, offz = neighbor.offset
-            to_send = @view s.psi[
-                get_send_index(offx, s.lnx),
-                get_send_index(offy, s.lny),
-                get_send_index(offz, s.lnz),
-            ]
-            send = MPI.Isend(to_send, s.comm; dest=neighbor.rank, tag=s.rank)
-            push!(s.requests, send)
-        end
-    end
-    MPI.Waitall(s.requests)
-
-    # assign received data to own subbox
-    for neighbor in s.neighbors
-        offx, offy, offz = neighbor.offset
-        ix = get_receive_index(offx, s.lnx)
-        iy = get_receive_index(offy, s.lny)
-        iz = get_receive_index(offz, s.lnz)
-        if neighbor.rank == s.rank
-            s.psi[ix, iy, iz] = @view s.psi[
-                get_send_index(offx, s.lnx),
-                get_send_index(offy, s.lny),
-                get_send_index(offz, s.lnz),
-            ]
-        else
-            s.psi[ix, iy, iz] = neighbor.receive_buffer
-        end
-    end
-
-    # reuse the rquests list for next time
-    empty!(s.requests)
-end
-
-function compute_force!(out::Array{Complex{Float64}, 3}, s::State, p::Parameter)
-    # exchange data with neighboring nodes/subboxes
-    # we need to exchange the psi field as we need to compute its
-    # laplacian for time propagation
-    exchange_field!(s)
-
-    a = tau_to_a(s.tau)
-    @inbounds for iz in 2:s.lnz
-        for iy in 2:s.lny
-            @simd for ix in 2:s.lnx
-                psi = s.psi[ix, iy, iz]
-                left = s.psi[ix + 1, iy, iz]
-                right = s.psi[ix - 1, iy, iz]
-                front = s.psi[ix, iy + 1, iz]
-                back = s.psi[ix, iy - 1, iz]
-                top = s.psi[ix, iy, iz + 1]
-                bottom = s.psi[ix, iy, iz - 1]
-                out[ix, iy, iz] = force_stecil(
-                    psi, left, right, front, back, top, bottom, a, p)
-            end
-        end
-    end
-
-    # syncronise all nodes
-    MPI.Barrier(s.comm)
-end
-
-function step_mpi!(s::State, p::Parameter)
+function step!(s::State, p::Parameter)
     if s.rank == 0
         print("$(s.step) of $(p.nsteps)\n")
     end
@@ -403,27 +400,7 @@ function step_mpi!(s::State, p::Parameter)
 
     # do local update
     print("local update on node $rank\n")
-    make_step!(s, p)
-    print("end frame $(s.step) on rank $(s.rank)\n")
 
-    # syncronise all nodes
-    MPI.Barrier(s.comm)
-end
-
-function finish_mpi!(_s::State)
-    _s # ignore
-    # clean up
-    MPI.Finalize()
-end
-
-@inline function force_stecil(psi, left, right, front, back, top, bottom,
-                              a, p::Parameter)
-    pot_force = psi * (abs2(psi) - 0.5*a)
-    laplace = (- 6 * psi + left + right + front + back + top + bottom) / p.dx^2
-    return + laplace - pot_force
-end
-
-function make_step!(s::State, p::Parameter)
     # this is the method used by gorghetto in axion strings: the attractive solution
     # propagate PDE using velocity verlet algorithm
     s.tau = p.tau_start + (s.step + 1) * p.Delta_tau
@@ -434,7 +411,7 @@ function make_step!(s::State, p::Parameter)
     update_psi_dot = @view s.psi_dot[2:end-1, 2:end-1, 2:end-1]
 
     # update the field ("position")
-    @. update_psi .+= p.Delta_tau*update_psi_dot + 0.5*p.Delta_tau^2*s.psi_dot_dot
+    @. update_psi += p.Delta_tau*update_psi_dot + 0.5*p.Delta_tau^2*s.psi_dot_dot
 
     # update the field derivative ("velocity")
     compute_force!(s.next_psi_dot_dot, s, p)
@@ -442,7 +419,10 @@ function make_step!(s::State, p::Parameter)
 
     # swap current and next arrays
     (s.psi_dot_dot, s.next_psi_dot_dot) = (s.next_psi_dot_dot, s.psi_dot_dot)
+    print("end frame $(s.step) on rank $(s.rank)\n")
 
+    # syncronise all nodes
+    MPI.Barrier(s.comm)
 end
 
 include("energy.jl")
