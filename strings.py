@@ -1,17 +1,17 @@
-import numpy as np
 import operator
-
+import numpy as np
+from mpi4py import MPI
 import AxionStrings
 
 # string contention method from Moore at al., Axion dark matter: strings and their cores, Appendix A.2
-def crosses_real_axis(psi1 : np.complex64, psi2 : np.complex64) -> bool:
+def crosses_real_axis(psi1 : np.complex128, psi2 : np.complex128) -> bool:
     return np.imag(psi1) * np.imag(psi2) < 0
 
-def handedness(psi1 : np.complex64, psi2 : np.complex64) -> int:
+def handedness(psi1 : np.complex128, psi2 : np.complex128) -> int:
     return np.sign(np.imag(psi1 * np.conj(psi2)))
 
-def loop_contains_string(psi1 : np.complex64, psi2 : np.complex64,
-        psi3 : np.complex64, psi4 : np.complex64):
+def loop_contains_string(psi1 : np.complex128, psi2 : np.complex128,
+        psi3 : np.complex128, psi4 : np.complex128):
     loop = (
           crosses_real_axis(psi1, psi2) * handedness(psi1, psi2)
         + crosses_real_axis(psi2, psi3) * handedness(psi2, psi3)

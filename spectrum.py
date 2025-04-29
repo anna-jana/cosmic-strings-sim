@@ -2,11 +2,11 @@ import operator
 import numpy as np
 from scipy.linalg import inv
 from scipy.fft import rfftfreq
-
+from mpi4py import MPI
 import AxionStrings
 import energy
 
-def compute_theta_dot(a : float, psi : np.complex64, psi_dot : np.complex64):
+def compute_theta_dot(a : float, psi : np.complex128, psi_dot : np.complex128):
     R = np.real(psi)
     I = np.imag(psi)
     R_dot = np.real(psi_dot)

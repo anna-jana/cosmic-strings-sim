@@ -1,7 +1,9 @@
-import numpy as np
 from dataclasses import dataclass
-from scipy.fft import fftfreq
 import itertools
+import numpy as np
+from scipy.fft import fftfreq
+from mpi4py import MPI
+from mpi4py_fft import PFFT, newDistArray, DistArray
 
 ############################################# parameters #######################################
 def log_to_H(l): return 1.0 / np.exp(l)
@@ -92,43 +94,36 @@ def get_receive_index(off, ln):
     else:
         raise ValueError("invalid offset")
 
+def iter_global_indicies(d: DistArray):
+    return itertools.product([range(start, start + size) for start, size in zip(d.substart, d.shape)])
+
 @dataclass
 class FieldGenerator:
-    plan: PencilFFTPlan
-    hat: PencilArray(complex, 3)
-    global_hat: GlobalPencilArray(complex, 3)
-    ks: np.ndarray
+    def __init__(self, p: Parameter):
+        self.p = p
+        self.ks = fftfreq(p.N, p.dx) * (2 * np.pi)
+        self.plan = PFFT(MPI.COMM_WORLD, (p.N, p.N, p.N), axes=(0, 1, 2), dtype=np.complex128)
+        self.hat = newDistArray(self.plan, False)
+        self.field_max = 1 / np.sqrt(2)
 
-def make_field_generator(pen: Pencil, p: Parameter) -> FieldGenerator:
-    transform = Transforms.FFT()
-    plan = PencilFFTPlan(pen, transform)
-    hat = allocate_output(plan)
-    ks = fftfreq(p.N, p.dx) * (2 * np.pi)
-    global_hat = global_view(hat)
-    return FieldGenerator(plan, hat, global_hat, ks)
+    def random_field_mpi(self) -> np.ndarray:
+        sx, sy, sz = self.hat.substart
+        for ix, iy, iz in iter_global_indicies(self.hat):
+            kx = self.ks[ix]
+            ky = self.ks[iy]
+            kz = self.ks[iz]
+            k = np.sqrt(kx**2 + ky**2 + kz**2)
+            self.hat[ix - sx, iy - sy, iz - sz] = (
+                    self.field_max * np.random.rand() * np.exp(2*np.pi*1j * np.random.rand())
+                    if k <= self.p.k_max else 0.0
+            )
 
-field_max = 1 / np.sqrt(2)
-
-def random_field_mpi(field_generator: FieldGenerator, p: Parameter) -> np.ndarray:
-    for ix, iy, iz in itertools.product([range(field_generator.global_hat.shape[0]),
-                                         range(field_generator.global_hat.shape[1]),
-                                         range(field_generator.global_hat.shape[2]),]):
-        kx = field_generator.ks[ix]
-        ky = field_generator.ks[iy]
-        kz = field_generator.ks[iz]
-        k = np.sqrt(kx**2 + ky**2 + kz**2)
-        field_generator.global_hat[ix, iy, iz] = field_max * np.random.rand() * np.exp(2*np.pi*1j * np.random.rand()) if k <= p.k_max else 0.0
-    field = allocate_input(field_generator.plan)
-    ldiv(field, field_generator.plan, field_generator.hat)
-
-    # field .*= size(field, 1)**3
-
-    return field
+        return self.plan.backward(self.hat)
 
 # infos about neighboring subbox
 @dataclass
 class Neighbor:
-    rank:int
+    rank: int
     offset: (int,int,int)
     receive_buffer: np.ndarray
 
@@ -143,7 +138,7 @@ class State:
     lnx: int
     lny: int
     lnz: int
-    pen: Pencil
+    pen: DistArray
     neighbors: list[Neighbor]
     comm: MPI.Comm
     rank: int
@@ -158,10 +153,7 @@ def exchange_field(s:State):
             pass
         else:
             # receive data from neighbor
-            receive = MPI.Irecv(neighbor.receive_buffer,
-                                 s.comm,
-                                 source=neighbor.rank,
-                                 tag=neighbor.rank)
+            receive = neighbor.irecv(neighbor.receive_buffer, s.comm, source=neighbor.rank, tag=neighbor.rank)
             requests.append(receive)
 
             # slice of own data to send to neighbor
@@ -171,9 +163,9 @@ def exchange_field(s:State):
                 get_send_index(offy, s.lny),
                 get_send_index(offz, s.lnz),
             ]
-            send = MPI.Isend(to_send, s.comm, dest=neighbor.rank, tag=s.rank)
+            send = s.comm.isend(to_send, dest=neighbor.rank, tag=s.rank)
             requests.append(send)
-    MPI.Waitall(requests)
+    MPI.Request.waitall(requests)
 
     # assign received data to own subbox
     for neighbor in s.neighbors:
@@ -217,12 +209,12 @@ def compute_force(out: np.ndarray[complex], s:State, p:Parameter):
     MPI.Barrier(s.comm)
 
 ###################################### initializing the simulation (cont.) ###############################
-def State(p:Parameter):
+def make_state(p: Parameter):
     # mpi setup
     MPI.Init()
     comm = MPI.COMM_WORLD
-    nprocs = MPI.Comm_size(comm)
-    rank = MPI.Comm_rank(comm)
+    nprocs = comm.Get_size()
+    rank = comm.Get_rank()
     root = 0
 
     print("begin setup $rank\n")
@@ -244,16 +236,19 @@ def State(p:Parameter):
     # find a different mpi fft library which supports this kind of decomposition
     # or we need to redistribute the data before/after ffts.
     # The later is propbably expensive and complicated.
-    pen = Pencil(global_grid_dimension, comm)
+    pen = DistArray(global_grid_dimension)
 
     # list of the number of subboxes per dimension
-    axis_lengths = (1,) + np.shape(topology(pen))
+    axis_lengths = pen.commsizes
     if rank == 0:
         print(pen)
-        print(topology(pen))
+        print(axis_lengths)
 
     # list of index ranges for each node
-    remote_shapes = [range_remote(pen, i) for i in range(nprocs)]
+    remote_shapes = [ for i in range(nprocs)] # TODO
+
+
+
     # collect all possible index ranges per dimension
     ranges_per_dimension = [sorted(set([remote_shapes[j] for j in range(len(remote_shapes))])) for i in range(len(remote_shapes))]
     # find the index of the index range (the index of the subbox) in each
@@ -294,7 +289,7 @@ def State(p:Parameter):
     field_generator = None # release field generator memory to gc
 
     # assign them to arrays with a boarder
-    psi = np.empty((lnx + 2, lny + 2, lnz + 2), dtype=np.complex64)
+    psi = np.empty((lnx + 2, lny + 2, lnz + 2), dtype=np.complex128)
     psi[1:-1, 1:-1, 1:-1] = parent(pen_psi)
     pen_psi = None
 

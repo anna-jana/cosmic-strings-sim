@@ -1,8 +1,5 @@
-# mpirun -n 4 python main.py
-
-import numpy as np
 import json
-
+import numpy as np
 import AxionStrings
 
 p = AxionStrings.Parameter(2.0, 3.0, 1e-2, 42, 1.0, 20, 1)

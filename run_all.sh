@@ -5,5 +5,5 @@ python string_solution_analytic.py
 python required_size.py
 
 # simulation
-julia --project=. run.jl
+mpirun -n 4 python main.py
 python plot.py

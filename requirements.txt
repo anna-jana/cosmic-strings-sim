@@ -2,3 +2,5 @@ numpy
 scipy
 matplotlib
 sympy
+mpi4py
+mpi4py-fft
