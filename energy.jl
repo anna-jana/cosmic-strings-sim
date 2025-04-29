@@ -47,68 +47,7 @@ function compute_radial_mode(psi, a)
     return sqrt(2) * real(psi / exp(angle(psi) * im)) / a - 1
 end
 
-function compute_energy(s::SingleNodeState, p::Parameter)
-    a = tau_to_a(s.tau)
-    H = t_to_H(tau_to_t(s.tau))
-    theta = angle.(s.psi)
-    radial = compute_radial_mode.(s.psi, a)
-
-    mean_axion_kinetic = 0.0
-    mean_axion_gradient = 0.0
-    mean_radial_kinetic = 0.0
-    mean_radial_gradient = 0.0
-    mean_radial_potential = 0.0
-    mean_interaction = 0.0
-
-    Threads.@threads for iz in 1:p.N
-        for iy in 1:p.N
-            @simd for ix in 1:p.N
-                @inbounds begin
-                    psi = s.psi[ix, iy, iz]
-                    psi_dot = s.psi_dot[ix, iy, iz]
-
-                    theta_left, theta_right = theta[mod1(ix + 1, p.N), iy, iz], theta[mod1(ix - 1, p.N), iy, iz]
-                    theta_front, theta_back = theta[ix, mod1(iy + 1, p.N), iz], theta[ix, mod1(iy - 1, p.N), iz]
-                    theta_top, theta_bottom = theta[ix, iy, mod1(iz + 1, p.N)], theta[ix, iy, mod1(iz - 1, p.N)]
-
-                    radial_left, radial_right = radial[mod1(ix + 1, p.N), iy, iz], radial[mod1(ix - 1, p.N), iy, iz]
-                    radial_front, radial_back = radial[ix, mod1(iy + 1, p.N), iz], radial[ix, mod1(iy - 1, p.N), iz]
-                    radial_top, radial_bottom = radial[ix, iy, mod1(iz + 1, p.N)], radial[ix, iy, mod1(iz - 1, p.N)]
-                    r = radial[ix, iy, iz]
-
-                    axion_kinetic, axion_gradient, radial_kinetic, radial_gradient, radial_potential, interaction = compute_energy_at(p, a, H,
-                        psi, psi_dot,
-                        theta_left, theta_right, theta_front, theta_back, theta_top, theta_bottom,
-                        r, radial_left, radial_right, radial_front, radial_back, radial_top, radial_bottom)
-
-                    mean_axion_kinetic += axion_kinetic
-                    mean_axion_gradient += axion_gradient
-                    mean_radial_kinetic += radial_kinetic
-                    mean_radial_gradient += radial_gradient
-                    mean_radial_potential += radial_potential
-                    mean_interaction += interaction
-                end
-            end
-        end
-    end
-
-    mean_axion_kinetic /= p.N^3
-    mean_axion_gradient /= p.N^3
-    mean_radial_kinetic /= p.N^3
-    mean_radial_gradient /= p.N^3
-    mean_radial_potential /= p.N^3
-    mean_interaction /= p.N^3
-
-    mean_axion_total = mean_axion_kinetic + mean_axion_gradient
-    mean_radial_total = mean_radial_kinetic + mean_radial_gradient + mean_radial_potential
-    mean_total = mean_axion_total + mean_radial_total + mean_interaction
-
-    return (mean_axion_kinetic, mean_axion_gradient, mean_axion_total,
-        mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_radial_total,
-        mean_interaction, mean_total)
-end
-
-function compute_energy(s::MPIState, p::Parameter)
+function compute_energy(s::State, p::Parameter)
     a = tau_to_a(s.tau)
     H = t_to_H(tau_to_t(s.tau))
 

@@ -18,13 +18,13 @@ end
     return abs(loop) == 2
 end
 
-function total_string_length(s::AbstractState, p::Parameter, l::Float64)
+function total_string_length(s::State, p::Parameter, l::Float64)
     a = tau_to_a(s.tau)
     t = tau_to_t(s.tau)
     return a * l / (p.L^3 * a^3) * t^2
 end
 
-function total_string_length(s::AbstractState, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
+function total_string_length(s::State, p::Parameter, strings::Vector{Vector{SVector{3, Float64}}})
     l = p.dx * sum(strings) do s
         sum(sqrt(cyclic_dist_squared(p, s[i], s[mod1(i + 1, length(s))])) for i in 1:length(s))
     end
@@ -47,7 +47,7 @@ end
 
 const c = 0.41238
 
-function compute_gamma_factors(s::AbstractState, i1, i2, i3, i4)
+function compute_gamma_factors(s::State, i1, i2, i3, i4)
     sum_v2 = 0.0
     sum_v = 0.0
     sum_gamma = 0.0
@@ -84,97 +84,9 @@ function compute_gamma_factors(s::AbstractState, i1, i2, i3, i4)
     return sum_v, sum_v2, sum_gamma, sum_norm
 end
 
-function detect_strings(s :: SingleNodeState, p :: Parameter)
-    string_points = Set{SVector{3, Float64}}()
-    mean_v = 0.0
-    mean_v2 = 0.0
-    mean_gamma = 0.0
-    sum_norm = 0.0
-
-    @inbounds for iz in 1:p.N
-        @inbounds for iy in 1:p.N
-            @inbounds for ix in 1:p.N
-                i1 = CartesianIndex(ix, iy, iz)
-                i2 = CartesianIndex(mod1(ix + 1, p.N), iy, iz)
-                i3 = CartesianIndex(mod1(ix + 1, p.N), mod1(iy + 1, p.N), iz)
-                i4 = CartesianIndex(ix, mod1(iy + 1, p.N), iz)
-                if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
-                    push!(string_points, SVector(ix - 1 + 0.5, iy - 1 + 0.5, iz))
-                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
-                    mean_v += new_v
-                    mean_v2 += new_v2
-                    mean_gamma += new_gamma
-                    sum_norm += new_norm
-                end
-
-                i1 = CartesianIndex(ix, iy, iz)
-                i2 = CartesianIndex(ix, mod1(iy + 1, p.N), iz)
-                i3 = CartesianIndex(ix, mod1(iy + 1, p.N), mod1(iz + 1, p.N))
-                i4 = CartesianIndex(ix, iy, mod1(iz + 1, p.N))
-                if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
-                    push!(string_points, SVector(ix, iy - 1 + 0.5, iz - 1 + 0.5))
-                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
-                    mean_v += new_v
-                    mean_v2 += new_v2
-                    mean_gamma += new_gamma
-                    sum_norm += new_norm
-                end
-
-                i1 = CartesianIndex(ix, iy, iz)
-                i2 = CartesianIndex(ix, iy, mod1(iz + 1, p.N))
-                i3 = CartesianIndex(mod1(ix + 1, p.N), iy, mod1(iz + 1, p.N))
-                i4 = CartesianIndex(mod1(ix + 1, p.N), iy, iz)
-                if loop_contains_string(s.psi[i1], s.psi[i2], s.psi[i3], s.psi[i4])
-                    push!(string_points, SVector(ix - 1 + 0.5, iy, iz - 1 + 0.5))
-                    new_v, new_v2, new_gamma, new_norm = compute_gamma_factors(s, i1, i2, i3, i4)
-                    mean_v += new_v
-                    mean_v2 += new_v2
-                    mean_gamma += new_gamma
-                    sum_norm += new_norm
-                end
-            end
-        end
-    end
-
-    mean_v     /= sum_norm
-    mean_v2    /= sum_norm
-    mean_gamma /= sum_norm
-
-    strings = Vector{SVector{3, Float64}}[]
-
-    while !isempty(string_points)
-        current_string = [pop!(string_points)]
-
-        while true
-            if isempty(string_points)
-                if cyclic_dist_squared(p, current_string[end], current_string[1]) >= sqrt(3)
-                    @warn "no points left but string isnt closed"
-                end
-                break
-            end
-
-            closest = argmin(point -> cyclic_dist_squared(p, current_string[end], point), string_points)
-
-            if length(current_string) <= 2 ||
-               cyclic_dist_squared(p, current_string[end], closest) <
-               cyclic_dist_squared(p, current_string[end], current_string[1])
-                delete!(string_points, closest)
-                push!(current_string, closest)
-            else
-                break # we closed the string
-            end
-
-        end
-
-        push!(strings, current_string)
-    end
-
-    return strings, mean_v, mean_v2, mean_gamma
-end
-
 @inline dist(p1, p2) = norm(p1 - p2)
 
-function check_if_at_boundary(s::MPIState, new::SVector{3, Float64})
+function check_if_at_boundary(s::State, new::SVector{3, Float64})
     return abs(new[1]) <= sqrt(3) ||
            abs(new[2]) <= sqrt(3) ||
            abs(new[3]) <= sqrt(3) ||
@@ -183,7 +95,7 @@ function check_if_at_boundary(s::MPIState, new::SVector{3, Float64})
            abs(new[3] - s.lnz) <= sqrt(3)
 end
 
-function detect_strings(s::MPIState, p::Parameter)
+function detect_strings(s::State, p::Parameter)
     string_points = Set{SVector{3, Float64}}()
     points = SVector{3, Float64}[]
     string_length = 0.0
@@ -298,7 +210,4 @@ function detect_strings(s::MPIState, p::Parameter)
     string_length = MPI.Reduce(string_length, +, s.root, s.comm)
 
     return total_string_length(s, p, string_length), points, mean_v, mean_v2, mean_gamma
-
 end
-
-

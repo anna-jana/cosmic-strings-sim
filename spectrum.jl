@@ -186,10 +186,9 @@ function get_string_mask(p::Parameter, strings)
     return W
 end
 
-
 # compute PPSE (pseudo-power-spectrum-estimator) of the theta-dot field
 # -> the spectrum of number denseties of axtion
-function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: Vector{Vector{SVector{3, Float64}}})
+function compute_spectrum_ppse(p :: Parameter, s :: State, strings :: Vector{Vector{SVector{3, Float64}}})
     a = tau_to_a(s.tau)
     theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
 
@@ -227,25 +226,7 @@ function compute_spectrum_ppse(p :: Parameter, s :: SingleNodeState, strings :: 
     return bin_ks, spectrum_corrected, spectrum_uncorrected
 end
 
-function compute_spectrum_autoscreen(p :: Parameter, s :: SingleNodeState)
-    a = tau_to_a(s.tau)
-    theta_dot = compute_theta_dot.(a, s.psi, s.psi_dot)
-    r = compute_radial_mode.(s.psi, a)
-
-    physical_ks, bin_width, surface_element, bin_ks = power_spectrum_utils(p, a)
-    spheres = compute_integration_spheres(p, physical_ks, bin_width)
-
-    screened_theta_dot = @. (1 + r) * theta_dot
-
-    spectrum = compute_power_spectrum(p, screened_theta_dot, spheres, surface_element, bin_ks)
-
-    return bin_ks, spectrum
-end
-
-# all(isapprox.(rfft(theat_dot), fft(theat_dot)[1:div(p.N, 2)+1, :, :]))
-
-
-function compute_spectrum_autoscreen(p :: Parameter, s :: MPIState)
+function compute_spectrum_autoscreen(p :: Parameter, s :: State)
     a = tau_to_a(s.tau)
     @views local_psi = s.psi[2:end-1, 2:end-1, 2:end-1]
     @views theta_dot = compute_theta_dot.(a, local_psi, s.psi_dot[2:end-1, 2:end-1, 2:end-1])
@@ -301,33 +282,3 @@ function compute_spectrum_autoscreen(p :: Parameter, s :: MPIState)
         return nothing, nothing
     end
 end
-
-# compute the instanteous emission spectrum defined in the paper by gorghetto (axion strings: the attractive solution, eq. 33)
-function compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2)
-    # re interpolate such that P1 and P2 have a shared support
-    k_min = max(k1[1], k2[1])
-    k_max = min(k1[end], k2[end])
-    ks = range(k_min, k_max, length=length(k1))
-
-    P1_interp = linear_interpolation(k1, P1)(ks)
-    P2_interp = linear_interpolation(k2, P2)(ks)
-
-    # compute time scales
-    t1 = tau_to_t(tau1)
-    t2 = tau_to_t(tau2)
-    a1 = tau_to_a(tau1)
-    a2 = tau_to_a(tau2)
-    t_mid = (t2 + t1) / 2
-    a_mid = t_to_a(t_mid)
-    log_mid = tau_to_log(t_to_tau(t_mid))
-
-    # finite difference
-    F = @. (a2^3 * P2_interp - a1^3 * P1_interp) / (t2 - t1) / a_mid^3
-
-    # normalize
-    A = sum(@. (F[2:end] + F[1:end-1]) / 2 * (ks[2:end] + ks[1:end-1]) / 2)
-    F ./= A
-
-    return log_mid, ks, F
-end
-
