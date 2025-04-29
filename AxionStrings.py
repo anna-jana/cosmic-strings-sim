@@ -245,15 +245,13 @@ def make_state(p: Parameter):
         print(axis_lengths)
 
     # list of index ranges for each node
-    remote_shapes = [ for i in range(nprocs)] # TODO
-
-
+    remote_shapes = comm.gather(pen.local_slice())
 
     # collect all possible index ranges per dimension
     ranges_per_dimension = [sorted(set([remote_shapes[j] for j in range(len(remote_shapes))])) for i in range(len(remote_shapes))]
     # find the index of the index range (the index of the subbox) in each
     # dimension for each node
-    remote_indicies = [[filter(lambda rr: r[dim] == rr, ranges_per_dimension[dim])[0]
+    remote_indicies = [[next(filter(lambda rr: r[dim] == rr, ranges_per_dimension[dim]))
                         for dim in range(len(remote_shapes[0]))] for r in remote_shapes]
 
     # map from the id of a node to its cartesian index in the subbox grid
@@ -266,15 +264,15 @@ def make_state(p: Parameter):
 
     # subbox setup
     np.random.seed(p.seed + rank)
-    lnx, lny, lnz = size_local(pen)
+    lnx, lny, lnz = pen.shape
 
     # setup the local part of the simulation box
-    field_generator = make_field_generator(pen, p)
+    field_generator = FieldGenerator(p)
 
     # generate random psi and psi_dot
     # we are doing this is akward way to save on memory
-    pen_psi = random_field_mpi(field_generator, p) # initialy phi
-    pen_psi_dot = random_field_mpi(field_generator, p) # initialy d phi / dt
+    pen_psi = field_generator.random_field_mpi() # initialy phi
+    pen_psi_dot = field_generator.random_field_mpi() # initialy d phi / dt
 
     if rank == root:
         print(sum(np.abs(pen_psi)**2) / np.shape(pen_psi, 0)**3)
@@ -290,11 +288,11 @@ def make_state(p: Parameter):
 
     # assign them to arrays with a boarder
     psi = np.empty((lnx + 2, lny + 2, lnz + 2), dtype=np.complex128)
-    psi[1:-1, 1:-1, 1:-1] = parent(pen_psi)
+    psi[1:-1, 1:-1, 1:-1] = pen_psi
     pen_psi = None
 
-    psi_dot = np.empty((lnx + 2, lny + 2, lnz + 2), dtype=np.complex64)
-    psi_dot[1:-1, 1:-1, 1:-1] = parent(pen_psi_dot)
+    psi_dot = np.empty((lnx + 2, lny + 2, lnz + 2), dtype=np.complex128)
+    psi_dot[1:-1, 1:-1, 1:-1] = pen_psi_dot
     pen_psi_dot = None
 
     # setup for exchanging data with neighboring subboxes/nodes
