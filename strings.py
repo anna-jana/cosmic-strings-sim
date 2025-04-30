@@ -1,4 +1,3 @@
-import operator
 import numpy as np
 from mpi4py import MPI
 import AxionStrings
@@ -62,7 +61,7 @@ def compute_gamma_factors(s:AxionStrings.State, i1, i2, i3, i4):
         phi_dot = psi_dot / a**2 - H * phi
 
         # Moore et al: Axion dark matter: strings and their cores, eq. A10
-        gamma2_times_v2 = np.real(np.abs2(phi_dot) / c**2 * (1 + np.abs2(phi) / (8 * c**2)) + (phi.conj() * phi_dot + phi * phi_dot.conj())**2 / (16 * c**4))
+        gamma2_times_v2 = np.real(np.abs(phi_dot)**2 / c**2 * (1 + np.abs(phi)**2 / (8 * c**2)) + (phi.conj() * phi_dot + phi * phi_dot.conj())**2 / (16 * c**4))
         # gamma2_times_v2 = v**2 / (1 - v**2) = x
         # v**2 = (1 - v**2) * x
         # x = v**2 + v**2 x = v**2 (1 + x)
@@ -174,10 +173,10 @@ def detect_strings(s:AxionStrings.State, p:AxionStrings.Parameter):
                 break # we closed the string
                 string_length += dist_to_first
 
-    sum_v = MPI.Reduce(sum_v, operator.add, s.root, s.comm)
-    sum_v2 = MPI.Reduce(sum_v2, operator.add, s.root, s.comm)
-    sum_gamma = MPI.Reduce(sum_gamma, operator.add, s.root, s.comm)
-    sum_norm = MPI.Reduce(sum_norm, operator.add, s.root, s.comm)
+    sum_v     = s.comm.Reduce(sum_v,     op=MPI.SUM, root=s.root)
+    sum_v2    = s.comm.Reduce(sum_v2,    op=MPI.SUM, root=s.root)
+    sum_gamma = s.comm.Reduce(sum_gamma, op=MPI.SUM, root=s.root)
+    sum_norm  = s.comm.Reduce(sum_norm,  op=MPI.SUM, root=s.root)
 
     if s.rank == s.root:
         mean_v = sum_v / sum_norm
@@ -186,6 +185,6 @@ def detect_strings(s:AxionStrings.State, p:AxionStrings.Parameter):
     else:
         mean_v = mean_v2 = mean_gamma = 0.0
 
-    string_length = MPI.Reduce(string_length, operator.add, s.root, s.comm)
+    string_length = c.comm.Reduce(string_length, op=MPI.SUM, root=s.root)
 
     return total_string_length(s, p, string_length), points, mean_v, mean_v2, mean_gamma

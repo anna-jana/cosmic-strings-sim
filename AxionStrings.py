@@ -4,6 +4,7 @@ import numpy as np
 from scipy.fft import fftfreq
 from mpi4py import MPI
 from mpi4py_fft import PFFT, newDistArray, DistArray
+import numba
 
 ############################################# parameters #######################################
 def log_to_H(l): return 1.0 / np.exp(l)
@@ -74,11 +75,11 @@ def make_parameter(log_start, log_end, Delta_tau, seed, k_max, nbins, radius):
 # neighboring subbox
 def get_send_index(off, ln):
     if off == -1:
-        return [1]
+        return 1, 2
     elif off == 0:
-        return range(1, ln)
+        return 1, ln
     elif off == 1:
-        return [ln - 1]
+        return ln - 1, ln
     else:
         raise ValueError("invalid offset")
 
@@ -86,24 +87,24 @@ def get_send_index(off, ln):
 # neighboring subbox
 def get_receive_index(off, ln):
     if off == -1:
-        return [0]
+        return 0, 1
     elif off == 0:
-        return range(1, ln)
+        return 1, ln
     elif off == 1:
-        return [ln]
+        return ln, ln + 1
     else:
         raise ValueError("invalid offset")
 
 def iter_global_indicies(d: DistArray):
-    return itertools.product([range(start, start + size) for start, size in zip(d.substart, d.shape)])
+    return itertools.product(*[list(range(start, start + size)) for start, size in zip(d.substart, d.shape)])
 
 @dataclass
 class FieldGenerator:
     def __init__(self, p: Parameter):
         self.p = p
         self.ks = fftfreq(p.N, p.dx) * (2 * np.pi)
-        self.plan = PFFT(MPI.COMM_WORLD, (p.N, p.N, p.N), axes=(0, 1, 2), dtype=np.complex128)
-        self.hat = newDistArray(self.plan, False)
+        self.plan = PFFT(MPI.COMM_WORLD, (p.N, p.N, p.N), axes=(0, 1, 2), dtype=np.complex128, backend="scipy")
+        self.hat = newDistArray(self.plan, True)
         self.field_max = 1 / np.sqrt(2)
 
     def random_field_mpi(self) -> np.ndarray:
@@ -117,7 +118,6 @@ class FieldGenerator:
                     self.field_max * np.random.rand() * np.exp(2*np.pi*1j * np.random.rand())
                     if k <= self.p.k_max else 0.0
             )
-
         return self.plan.backward(self.hat)
 
 # infos about neighboring subbox
@@ -145,6 +145,10 @@ class State:
     root: int
 
 ######################################### computing the rhs #######################################
+def compute_message_tag(s, sender_rank, receiver_rank):
+    nranks = s.comm.Get_size()
+    return sender_rank + receiver_rank*nranks
+
 def exchange_field(s:State):
     requests: list[MPI.Request] = []
     for neighbor in s.neighbors:
@@ -153,36 +157,54 @@ def exchange_field(s:State):
             pass
         else:
             # receive data from neighbor
-            receive = neighbor.irecv(neighbor.receive_buffer, s.comm, source=neighbor.rank, tag=neighbor.rank)
+            receive = s.comm.Irecv([neighbor.receive_buffer, MPI.COMPLEX16], source=neighbor.rank) # , tag=compute_message_tag(s, neighbor.rank, s.rank))
             requests.append(receive)
 
             # slice of own data to send to neighbor
             offx, offy, offz = neighbor.offset
-            to_send = s.psi[
-                get_send_index(offx, s.lnx),
-                get_send_index(offy, s.lny),
-                get_send_index(offz, s.lnz),
-            ]
-            send = s.comm.isend(to_send, dest=neighbor.rank, tag=s.rank)
+            send_start_x, send_stop_x = get_send_index(offx, s.lnx)
+            send_start_y, send_stop_y = get_send_index(offy, s.lny)
+            send_start_z, send_stop_z = get_send_index(offz, s.lnz)
+            to_send = s.psi[send_start_x:send_stop_x, send_start_y:send_stop_y, send_start_z:send_stop_z].copy()
+            send = s.comm.Isend([to_send, MPI.COMPLEX16], dest=neighbor.rank) # , tag=compute_message_tag(s, s.rank, neighbor.rank))
             requests.append(send)
-    MPI.Request.waitall(requests)
+
+        MPI.Request.Waitall(requests)
 
     # assign received data to own subbox
     for neighbor in s.neighbors:
         offx, offy, offz = neighbor.offset
-        ix = get_receive_index(offx, s.lnx)
-        iy = get_receive_index(offy, s.lny)
-        iz = get_receive_index(offz, s.lnz)
+        receive_start_x, receive_stop_x = get_receive_index(offx, s.lnx)
+        receive_start_y, receive_stop_y = get_receive_index(offy, s.lny)
+        receive_start_z, receive_stop_z = get_receive_index(offz, s.lnz)
         if neighbor.rank == s.rank:
-            s.psi[ix, iy, iz] = s.psi[
-                get_send_index(offx, s.lnx),
-                get_send_index(offy, s.lny),
-                get_send_index(offz, s.lnz),
+            send_start_x, send_stop_x = get_send_index(offx, s.lnx)
+            send_start_y, send_stop_y = get_send_index(offy, s.lny)
+            send_start_z, send_stop_z = get_send_index(offz, s.lnz)
+            s.psi[receive_start_x:receive_stop_x, receive_start_y:receive_stop_y, receive_start_z:receive_stop_z] = s.psi[
+                send_start_x:send_stop_x, send_start_y:send_stop_y, send_start_z:send_stop_z
             ]
         else:
-            s.psi[ix, iy, iz] = neighbor.receive_buffer
+            s.psi[receive_start_x:receive_stop_x, receive_start_y:receive_stop_y, receive_start_z:receive_stop_z] = neighbor.receive_buffer
+
 
     # reuse the rquests list for next time
+
+@numba.njit
+def compute_force_local(out, psi_array, lnx, lny, lnz, dx, a):
+    for ix in range(1, lnx):
+       for iy in range(1, lny):
+            for iz in range(1, lnz):
+                left   = psi_array[ix + 1, iy, iz]
+                right  = psi_array[ix - 1, iy, iz]
+                front  = psi_array[ix, iy + 1, iz]
+                back   = psi_array[ix, iy - 1, iz]
+                top    = psi_array[ix, iy, iz + 1]
+                bottom = psi_array[ix, iy, iz - 1]
+                psi = psi_array[ix, iy, iz]
+                pot_force = psi * (psi*np.conj(psi) - 0.5*a)
+                laplace = (- 6 * psi + left + right + front + back + top + bottom) / dx**2
+                out[ix, iy, iz] = + laplace - pot_force
 
 def compute_force(out: np.ndarray[complex], s:State, p:Parameter):
     # exchange data with neighboring nodes/subboxes
@@ -190,34 +212,21 @@ def compute_force(out: np.ndarray[complex], s:State, p:Parameter):
     # laplacian for time propagation
     exchange_field(s)
 
-    a = tau_to_a(s.tau)
-    for ix in range(1, s.lnx):
-       for iy in range(1, s.lny):
-            for iz in range(1, s.lnz):
-                psi = s.psi[ix, iy, iz]
-                left = s.psi[ix + 1, iy, iz]
-                right = s.psi[ix - 1, iy, iz]
-                front = s.psi[ix, iy + 1, iz]
-                back = s.psi[ix, iy - 1, iz]
-                top = s.psi[ix, iy, iz + 1]
-                bottom = s.psi[ix, iy, iz - 1]
-                pot_force = psi * (psi*psi.conj() - 0.5*a)
-                laplace = (- 6 * psi + left + right + front + back + top + bottom) / p.dx**2
-                out[ix, iy, iz] = + laplace - pot_force
+    # compute the force for the local array
+    compute_force_local(out, s.psi, s.lnx, s.lny, s.lnz, p.dx, tau_to_a(s.tau))
 
     # syncronise all nodes
-    MPI.Barrier(s.comm)
+    s.comm.Barrier()
 
 ###################################### initializing the simulation (cont.) ###############################
 def make_state(p: Parameter):
     # mpi setup
-    MPI.Init()
     comm = MPI.COMM_WORLD
     nprocs = comm.Get_size()
     rank = comm.Get_rank()
     root = 0
 
-    print("begin setup $rank\n")
+    print(f"begin setup {rank}\n")
 
     # setup the grid (divide the simulation into subboxes for each node)
     global_grid_dimension = (p.N, p.N, p.N)
@@ -236,35 +245,35 @@ def make_state(p: Parameter):
     # find a different mpi fft library which supports this kind of decomposition
     # or we need to redistribute the data before/after ffts.
     # The later is propbably expensive and complicated.
-    pen = DistArray(global_grid_dimension)
+    darray = DistArray(global_grid_dimension)
 
     # list of the number of subboxes per dimension
-    axis_lengths = pen.commsizes
-    if rank == 0:
-        print(pen)
-        print(axis_lengths)
+    axis_lengths = darray.commsizes
 
     # list of index ranges for each node
-    remote_shapes = comm.gather(pen.local_slice())
+    remote_ranks = comm.allgather(comm.Get_rank())
+    remote_slices = comm.allgather(darray.local_slice())
 
-    # collect all possible index ranges per dimension
-    ranges_per_dimension = [sorted(set([remote_shapes[j] for j in range(len(remote_shapes))])) for i in range(len(remote_shapes))]
-    # find the index of the index range (the index of the subbox) in each
-    # dimension for each node
-    remote_indicies = [[next(filter(lambda rr: r[dim] == rr, ranges_per_dimension[dim]))
-                        for dim in range(len(remote_shapes[0]))] for r in remote_shapes]
+    axis_starts = [list(sorted(set(remote_slice[i].start for remote_slice in remote_slices))) for i in range(3)]
+    remote_box_indices = [tuple(axis_starts[i].index(remote_slice[i].start) for i in range(3)) for remote_slice in remote_slices]
 
     # map from the id of a node to its cartesian index in the subbox grid
-    node_id_to_box_index = dict(enumerate(remote_indicies))
+    node_id_to_box_index = dict(zip(remote_ranks, remote_box_indices))
     # map from the cartesian index in the subbox grid to the id of the node
-    box_index_to_node_id = dict(zip(remote_indicies, range(nprocs)))
+    box_index_to_node_id = dict(zip(remote_box_indices, remote_ranks))
+
+    if rank == root:
+        print("ranks:", remote_ranks)
+        print("slices on each rank:", remote_slices)
+        print("start indices for the boxes on each axis:", axis_starts)
+        print("box index for each rank:", remote_box_indices)
 
     # without PencilArrays:
     # grid = distributed_grid(global_grid_dimension, nprocs)
 
     # subbox setup
     np.random.seed(p.seed + rank)
-    lnx, lny, lnz = pen.shape
+    lnx, lny, lnz = darray.shape
 
     # setup the local part of the simulation box
     field_generator = FieldGenerator(p)
@@ -273,9 +282,6 @@ def make_state(p: Parameter):
     # we are doing this is akward way to save on memory
     pen_psi = field_generator.random_field_mpi() # initialy phi
     pen_psi_dot = field_generator.random_field_mpi() # initialy d phi / dt
-
-    if rank == root:
-        print(sum(np.abs(pen_psi)**2) / np.shape(pen_psi, 0)**3)
 
     H = t_to_H(tau_to_t(p.tau_start))
     a = tau_to_a(p.tau_start)
@@ -306,12 +312,12 @@ def make_state(p: Parameter):
             offset[dim] = side
 
             neighbor_index = (own_subbox_index + offset) % axis_lengths
-            neighbor_id = box_index_to_node_id[neighbor_index]
+            neighbor_id = box_index_to_node_id[tuple(neighbor_index)]
 
-            rcvbuf = np.empty((
-                len(get_receive_index(offset[0], lnx)),
-                len(get_receive_index(offset[1], lny)),
-                len(get_receive_index(offset[2], lnz))))
+            receive_start_x, receive_stop_x = get_receive_index(offset[0], lnx)
+            receive_start_y, receive_stop_y = get_receive_index(offset[1], lny)
+            receive_start_z, receive_stop_z = get_receive_index(offset[2], lnz)
+            rcvbuf = np.empty((receive_stop_x - receive_start_x, receive_stop_y - receive_start_y, receive_stop_z - receive_start_z), dtype=np.complex128)
 
             neighbor = Neighbor(neighbor_id, tuple(offset), rcvbuf)
 
@@ -322,19 +328,19 @@ def make_state(p: Parameter):
         step=0,
         psi=psi,
         psi_dot=psi_dot,
-        psi_dot_dot=np.empty((lnx, lny, lnz)),
-        next_psi_dot_dot=np.empty((lnx, lny, lnz)),
+        psi_dot_dot=np.empty((lnx, lny, lnz), dtype=np.complex128),
+        next_psi_dot_dot=np.empty((lnx, lny, lnz), dtype=np.complex128),
         lnx=lnx,
         lny=lny,
         lnz=lnz,
-        pen=pen,
+        pen=darray,
         neighbors=neighbors,
         comm=comm,
         rank=rank,
         root=root,
     )
 
-    MPI.Barrier(comm)
+    comm.Barrier()
 
     compute_force(s.psi_dot_dot, s, p)
 
@@ -375,4 +381,5 @@ def step(s:State, p:Parameter):
     print(f"end frame {s.step} on rank {s.rank}")
 
     # syncronise all nodes
-    MPI.Barrier(s.comm)
+    s.comm.Barrier()
+

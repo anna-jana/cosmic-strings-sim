@@ -94,12 +94,12 @@ def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
                 mean_interaction += interaction
 
     # sum all the subboxes
-    mean_axion_kinetic = MPI.Reduce(mean_axion_kinetic, operator.add, s.root, s.comm)
-    mean_axion_gradient = MPI.Reduce(mean_axion_gradient, operator.add, s.root, s.comm)
-    mean_radial_kinetic = MPI.Reduce(mean_radial_kinetic, operator.add, s.root, s.comm)
-    mean_radial_gradient = MPI.Reduce(mean_radial_gradient, operator.add, s.root, s.comm)
-    mean_radial_potential = MPI.Reduce(mean_radial_potential, operator.add, s.root, s.comm)
-    mean_interaction = MPI.Reduce(mean_interaction, operator.add, s.root, s.comm)
+    mean_axion_kinetic    = s.comm.Reduce(mean_axion_kinetic,    op=MPI.SUM, root=s.root)
+    mean_axion_gradient   = s.comm.Reduce(mean_axion_gradient,   op=MPI.SUM, root=s.root)
+    mean_radial_kinetic   = s.comm.Reduce(mean_radial_kinetic,   op=MPI.SUM, root=s.root)
+    mean_radial_gradient  = s.comm.Reduce(mean_radial_gradient,  op=MPI.SUM, root=s.root)
+    mean_radial_potential = s.comm.Reduce(mean_radial_potential, op=MPI.SUM, root=s.root)
+    mean_interaction      = s.comm.Reduce(mean_interaction,      op=MPI.SUM, root=s.root)
 
     mean_axion_kinetic /= p.N**3
     mean_axion_gradient /= p.N**3
