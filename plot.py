@@ -26,7 +26,7 @@ with open("parameter.json", "r") as f:
 tau, axion_kinetic, axion_gradient, axion_total, radial_kinetic, radial_gradient, radial_potential, radial_total, interaction, total = np.loadtxt("energies.dat", unpack=True)
 logs = AxionStrings.tau_to_log(tau)
 
-plt.figure(figsize=(9, 3), constrained_layout=True)
+plt.figure(constrained_layout=True)
 plt.plot(logs, axion_kinetic, color="tab:blue", ls=":", label="axion, kinetic")
 plt.plot(logs, axion_gradient, color="tab:blue", ls="--", label="axion, gradient")
 plt.plot(logs, axion_total, color="tab:blue", ls="-", label="axion")
@@ -43,7 +43,7 @@ plt.ylabel(r"averaged energy density $f_a^2 m_r^2$\n")
 plt.legend()
 plt.savefig("energy_densities.pdf")
 
-plt.figure()
+plt.figure(constrained_layout=True)
 plt.plot(logs, interaction)
 plt.xlabel(r"$log(m_r / H)$")
 plt.ylabel(r"averaged interaction energy density $f_a^2 m_r^2$\n")
@@ -78,14 +78,13 @@ V_Hubbel = (L * a)**3
 zetas = l_physical / V_Hubbel * t**2
 
 # string length pa
-plt.figure()
+plt.figure(constrained_layout=True)
 plt.semilogy(logs, zetas)
 plt.xlabel(r"$\log(m_r / H)$")
 plt.ylabel(r"$\zeta = a l / a^3 L^3 \times t^2$")
 plt.savefig("string_length.pdf")
 
 ############################################### emission spectra #####################################################
-exit()
 # compute the instanteous emission spectrum defined in the paper by gorghetto (axion strings: the attractive solution, eq. 33)
 def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
     # re interpolate such that P1 and P2 have a shared support
@@ -114,40 +113,41 @@ def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
 
     return log_mid, ks, F
 
-def normalize(ks, xs):
-    norm = np.sqrt(np.sum(xs**2) * (ks[1] - ks[0]))
-    return xs / norm
+# k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
+# k2, P2_ppse, P2_uncorrected, P2_screened = np.loadtxt("spectrum2.dat", unpack=True)
 
-k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
-k2, P2_ppse, P2_uncorrected, P2_screened = np.loadtxt("spectrum2.dat", unpack=True)
+k1, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
+k2, P2_screened = np.loadtxt("spectrum2.dat", unpack=True)
 
 tau1 = tau_start
 tau2 = tau_end
-log_mid, ks, F_ppse = compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
-_, _, F_screened = compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
+# log_mid, ks, F_ppse = compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
+log_mid, ks, F_screened = compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
 
 log1 = AxionStrings.tau_to_log(tau1)
 log2 = AxionStrings.tau_to_log(tau2)
+H1 = AxionStrings.log_to_H(log1)
+H2 = AxionStrings.log_to_H(log2)
 
-plt.figure()
-plt.plot(k1, normalize(k1, P1_ppse), label=f"ppse, log = {log1}")
-plt.plot(k2, normalize(k2, P2_ppse), label=f"ppse, log = {log2}")
-plt.plot(k1, normalize(k1, P1_screened), label=f"screened, log = {log1}")
-plt.plot(k2, normalize(k2, P2_screened), label=f"screeend, log = {log2}")
-plt.plot(k1, normalize(k1, P1_uncorrected), label=f"uncorrected, log = {log1}")
-plt.plot(k2, normalize(k2, P2_uncorrected), label=f"uncorrected, log = {log2}")
-plt.xlabel("physical momentum |k|")
-plt.ylabel("power spectrum P(k)")
+plt.figure(constrained_layout=True)
+# plt.plot(k1, P1_ppse, label=f"ppse, log = {log1}")
+# plt.plot(k2, P2_ppse, label=f"ppse, log = {log2}")
+plt.plot(k1 / H1, P1_screened / H1, label=f"screened, log = {log1:.2}")
+plt.plot(k2 / H2, P2_screened / H2, label=f"screeend, log = {log2:.2}")
+# plt.plot(k1, P1_uncorrected, label=f"uncorrected, log = {log1}")
+# plt.plot(k2, P2_uncorrected, label=f"uncorrected, log = {log2}")
+plt.xlabel("physical momentum |k| / H")
+plt.ylabel("power spectrum P(k) / (f_a^2 H)")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()
 plt.title("spectrum of free axions")
 plt.savefig("spectra.pdf")
 
-plt.figure()
-plt.loglog(ks, F_ppse, label="ppse, simulation at log=$log_mid")
-plt.loglog(ks, F_screened, label="screened, simulation at log=$log_mid")
-plt.xlabel("physical momentum |k|")
+plt.figure(constrained_layout=True)
+# plt.loglog(ks, F_ppse, label=f"ppse, simulation at log=$log_mid")
+plt.loglog(ks / AxionStrings.log_to_H(log_mid), F_screened, label=f"screened, simulation at log={log_mid:.2}")
+plt.xlabel("physical momentum |k| / H")
 plt.ylabel("F(k)")
 plt.title("instantaneous emission spectrum")
 plt.legend()

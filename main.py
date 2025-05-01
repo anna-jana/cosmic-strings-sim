@@ -9,15 +9,14 @@ import spectrum
 p = AxionStrings.make_parameter(2.0, 3.0, 1e-3, 42, 1.0, 20, 1)
 s = AxionStrings.State(p)
 
-ks_init, P_init = spectrum.compute_spectrum_autoscreen(s)
-
 if s.rank == s.root:
     with open("parameter.json", "w") as f:
         json.dump(dataclasses.asdict(p), f)
+    energy_data = []
+    velocity_data = []
+    string_data = []
 
-energy_data = []
-velocity_data = []
-string_data = []
+ks_init, P_init = spectrum.compute_spectrum_autoscreen(s)
 
 for _ in range(p.nsteps):
     s.do_step()
@@ -37,8 +36,8 @@ if s.rank == s.root:
     np.savetxt("energies.dat", energy_data)
     np.savetxt("velocities.dat", velocity_data)
     np.savetxt("string_length.dat", string_data)
-    np.savetxt("spectrum1.dat", ks_init, P_init)
-    np.savetxt("spectrum2.dat", ks, P)
+    np.savetxt("spectrum1.dat", np.vstack([ks_init, P_init]).T)
+    np.savetxt("spectrum2.dat", np.vstack([ks, P]).T)
 
 s.finish_mpi()
 

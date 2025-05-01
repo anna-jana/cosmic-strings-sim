@@ -1,9 +1,8 @@
 import numpy as np
 from scipy.linalg import inv
-from scipy.fft import rfftfreq, fftfreq, rfftn, irfftn
-import pyfftw
+from scipy.fft import rfftfreq, fftfreq
 from mpi4py import MPI
-from mpi4py_fft import PFFT, DistArray, newDistArray
+from mpi4py_fft import PFFT, DistArray
 import numba
 import AxionStrings
 import energy
@@ -74,13 +73,6 @@ def check_integer_k(integer_k:(int, int, int), min_l, max_l) -> bool:
            single_check_integer_k(integer_k[1], min_l, max_l) and
            single_check_integer_k(integer_k[2], min_l, max_l))
 
-def distributed_fft(s: AxionStrings.State, array):
-    darray = DistArray((s.p.N, s.p.N, s.p.N), [0, 1, 2], buffer=array, dtype=np.float64,)
-    print(s.rank, darray.global_shape, darray.substart, darray.shape, darray.dtype)
-    plan = PFFT(s.comm, darray=darray)
-    print(s.rank, plan.dtype(), plan.xfftn[0].dtype, plan.xfftn[0].real_transform, plan.dimensions, plan.global_shape(True), plan.global_shape(False))
-    return plan.forward(darray)
-
 @numba.njit
 def substract_wave_numbers_lookup(W_fft, p, min_l, max_l, i1, i2):
     # convert to integers l such that k = 2pi * l / (Delta x * N)
@@ -97,14 +89,36 @@ def substract_wave_numbers_lookup(W_fft, p, min_l, max_l, i1, i2):
         # convert back to 1-based and index into W_fft
         return  W_fft[ix, iy, iz]
 
-# TODO: numba?
+########################################### distributed ffts ###############################################
+def distributed_fft(s: AxionStrings.State, array):
+    darray = DistArray((s.p.N, s.p.N, s.p.N), [0, 1, 2], buffer=array, dtype=np.float64,)
+    plan = PFFT(s.comm, darray=darray, backend="numpy")
+    ans = plan.forward(darray)
+    darray_ans = DistArray((s.p.N, s.p.N, s.p.N // 2),
+            [0, 1, 2], buffer=ans, dtype=np.complex128,)
+
+    return darray_ans
+
+################################### compute a powerspectrum of an arbitary array ####################################
+@numba.njit
+def compute_spheres_kernel(i, N, bin_width, physical_ks_short, physical_ks_long):
+    spheres = []
+    bin_k_min = i * bin_width
+    bin_k_max = bin_k_min + bin_width
+    for ix in range(N):
+        for iy in range(N):
+            for iz in range(N // 2 + 1):
+                k2 = physical_ks_long[ix]**2 + physical_ks_long[iy]**2 + physical_ks_short[iz]**2
+                if k2 >= bin_k_min**2 and k2 <= bin_k_max**2:
+                    spheres.append((ix, iy, iz))
+    return spheres
+
 def power_spectrum_utils(p: AxionStrings.Parameter, a):
     # prepare histogram
     dx_physical = p.dx * a
     kmax = calc_k_max_grid(p.N, dx_physical)
-    # physical_ks_short = rfftfreq(p.N, dx_physical) * 2*np.pi
+    physical_ks_short = rfftfreq(p.N, dx_physical) * 2*np.pi
     physical_ks_long = fftfreq(p.N, dx_physical) * 2*np.pi
-    physical_ks_short = physical_ks_long
 
     Delta_k = 2*np.pi / (p.N * dx_physical)
     bin_width = kmax / p.nbins
@@ -116,20 +130,10 @@ def power_spectrum_utils(p: AxionStrings.Parameter, a):
     area = 4*np.pi * (i*bin_width + bin_width/2)**2
     surface_element = area / vol * Delta_k**3 / bin_ks**2
 
-    spheres = [[] for _ in range(p.nbins)]
-    for i in range(p.nbins):
-        bin_k_min = i * bin_width
-        bin_k_max = bin_k_min + bin_width
-        for ix in range(p.N):
-            for iy in range(p.N):
-                for iz in range(p.N // 2):
-                    k2 = physical_ks_long[ix]**2 + physical_ks_long[iy]**2 + physical_ks_short[iz]**2
-                    if k2 >= bin_k_min**2 and k2 <= bin_k_max**2:
-                        spheres[i].append((ix, iy, iz))
+    spheres = [compute_spheres_kernel(i, p.N, bin_width, physical_ks_short, physical_ks_long) for i in range(p.nbins)]
 
     return physical_ks_short, physical_ks_long, bin_width, surface_element, bin_ks, spheres
 
-################################### compute a powerspectrum of an arbitary array ####################################
 # P_field(k) = k**2 / L**3 \int d \Omega / 4\pi 0.5 * | field(k) |**2
 @numba.njit
 def compute_power_spectrum_kernel(field_fft, i, bin_width,
@@ -148,7 +152,7 @@ def compute_power_spectrum_kernel(field_fft, i, bin_width,
 
 def compute_power_spectrum(s: AxionStrings.State, field, spheres, surface_element, physical_ks_short, physical_ks_long, bin_width):
     field_fft = distributed_fft(s, field)
-    sx, sy, sz = field_fft.subshape
+    sx, sy, sz = field_fft.substart
     my_range = field_fft.local_slice()
     start_x, stop_x = my_range[0].start, my_range[0].stop
     start_y, stop_y = my_range[1].start, my_range[1].stop
@@ -256,4 +260,6 @@ def compute_spectrum_autoscreen(s: AxionStrings.State):
     physical_ks_short, physical_ks_long, bin_width, surface_element, bin_ks, spheres = power_spectrum_utils(s.p, a)
     spectrum = compute_power_spectrum(s, screened_theta_dot, spheres, surface_element, physical_ks_short, physical_ks_long, bin_width)
 
-    return (bin_ks, spectrum) if s.rank == s.root else None, None
+    return (
+        (bin_ks, spectrum) if s.rank == s.root else (None, None)
+    )
