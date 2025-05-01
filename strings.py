@@ -173,10 +173,10 @@ def detect_strings(s:AxionStrings.State, p:AxionStrings.Parameter):
                 break # we closed the string
                 string_length += dist_to_first
 
-    sum_v     = s.comm.Reduce(sum_v,     op=MPI.SUM, root=s.root)
-    sum_v2    = s.comm.Reduce(sum_v2,    op=MPI.SUM, root=s.root)
-    sum_gamma = s.comm.Reduce(sum_gamma, op=MPI.SUM, root=s.root)
-    sum_norm  = s.comm.Reduce(sum_norm,  op=MPI.SUM, root=s.root)
+    sum_v     = s.comm.reduce(sum_v,     op=MPI.SUM, root=s.root)
+    sum_v2    = s.comm.reduce(sum_v2,    op=MPI.SUM, root=s.root)
+    sum_gamma = s.comm.reduce(sum_gamma, op=MPI.SUM, root=s.root)
+    sum_norm  = s.comm.reduce(sum_norm,  op=MPI.SUM, root=s.root)
 
     if s.rank == s.root:
         mean_v = sum_v / sum_norm
@@ -185,6 +185,6 @@ def detect_strings(s:AxionStrings.State, p:AxionStrings.Parameter):
     else:
         mean_v = mean_v2 = mean_gamma = 0.0
 
-    string_length = c.comm.Reduce(string_length, op=MPI.SUM, root=s.root)
+    string_length = c.comm.reduce(string_length, op=MPI.SUM, root=s.root)
 
     return total_string_length(s, p, string_length), points, mean_v, mean_v2, mean_gamma

@@ -244,7 +244,7 @@ def compute_spectrum_autoscreen(p : AxionStrings.Parameter, s : AxionStrings.Sta
         for (ix, iy, iz) in my_sphere_parts[i]:
             spectrum[i] += np.abs(screended_theta_dot_fft[ix - sx, iy - sy, iz - sz])**2
 
-        spectrum[i] = s.comm.Reduce(spectrum[i], op=MPI.SUM, root=s.root)
+        spectrum[i] = s.comm.reduce(spectrum[i], op=MPI.SUM, root=s.root)
         if s.rank == s.root:
             spectrum[i] *= surface_element[i]
             spectrum[i] *= 1 / p.L**3 / (4 * np.pi)**2 * 0.5

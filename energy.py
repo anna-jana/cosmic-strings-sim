@@ -1,11 +1,10 @@
-import operator
 import numpy as np
 from mpi4py import MPI
+import numba
 import AxionStrings
 
-def compute_energy_at(
-        p:AxionStrings.Parameter, a, H,
-        psi, psi_dot,
+@numba.njit
+def compute_energy_at(a, H, dx, psi, psi_dot,
         theta_left, theta_right, theta_front, theta_back, theta_top, theta_bottom,
         radial, radial_left, radial_right, radial_front, radial_back, radial_top, radial_bottom,
     ):
@@ -22,7 +21,7 @@ def compute_energy_at(
     diff_theta_x = theta_left - theta_right
     diff_theta_y = theta_front - theta_back
     diff_theta_z = theta_top - theta_bottom
-    axion_gradient = 0.5 / (p.dx * 2)**2 * (diff_theta_x**2 + diff_theta_y**2 + diff_theta_z**2) / a**2
+    axion_gradient = 0.5 / (dx * 2)**2 * (diff_theta_x**2 + diff_theta_y**2 + diff_theta_z**2) / a**2
 
     ## radial mode
     # kinetic
@@ -35,7 +34,7 @@ def compute_energy_at(
     diff_radial_x = radial_left - radial_right
     diff_radial_y = radial_front - radial_back
     diff_radial_z = radial_top - radial_bottom
-    radial_gradient = 0.5 / (p.dx * 2)**2 * (diff_radial_x**2 + diff_radial_y**2 + diff_radial_z**2) / a**2
+    radial_gradient = 0.5 / (dx * 2)**2 * (diff_radial_x**2 + diff_radial_y**2 + diff_radial_z**2) / a**2
 
     # potential
     inner = radial**2 + 2.0 * radial
@@ -46,19 +45,13 @@ def compute_energy_at(
 
     return axion_kinetic, axion_gradient, radial_kinetic, radial_gradient, radial_potential, interaction
 
+@numba.njit
 def compute_radial_mode(psi, a):
     # return sqrt(2) * abs(psi) / a - 1
     return np.sqrt(2) * np.real(psi / np.exp(np.angle(psi) * 1j)) / a - 1
 
-def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
-    a = AxionStrings.tau_to_a(s.tau)
-    H = AxionStrings.t_to_H(AxionStrings.tau_to_t(s.tau))
-
-    AxionStrings.exchange_field(s)
-
-    theta = np.angle(s.psi)
-    radial = compute_radial_mode(s, a)
-
+@numba.njit
+def compute_energy_local(lnx, lny, lnz, theta, radial, psi, psi_dot, a, H, dx):
     mean_axion_kinetic = 0.0
     mean_axion_gradient = 0.0
     mean_radial_kinetic = 0.0
@@ -66,12 +59,9 @@ def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
     mean_radial_potential = 0.0
     mean_interaction = 0.0
 
-    for ix in range(1, p.N):
-       for iy in range(1, s.lny):
-            for iz in range(1, s.lnz):
-                psi = s.psi[ix, iy, iz]
-                psi_dot = s.psi_dot[ix, iy, iz]
-
+    for ix in range(1, lnx + 1):
+       for iy in range(1, lny + 1):
+            for iz in range(1, lnz + 1):
                 theta_left, theta_right = theta[ix + 1, iy, iz], theta[ix - 1, iy, iz]
                 theta_front, theta_back = theta[ix, iy + 1, iz], theta[ix, iy - 1, iz]
                 theta_top, theta_bottom = theta[ix, iy, iz + 1], theta[ix, iy, iz - 1]
@@ -81,8 +71,8 @@ def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
                 radial_top, radial_bottom = radial[ix, iy, iz + 1], radial[ix, iy, iz - 1]
                 r = radial[ix, iy, iz]
 
-                axion_kinetic, axion_gradient, radial_kinetic, radial_gradient, radial_potential, interaction = compute_energy_at(p, a, H,
-                    psi, psi_dot,
+                axion_kinetic, axion_gradient, radial_kinetic, radial_gradient, radial_potential, interaction = compute_energy_at(
+                    a, H, dx, psi[ix, iy, iz], psi_dot[ix, iy, iz],
                     theta_left, theta_right, theta_front, theta_back, theta_top, theta_bottom,
                     r, radial_left, radial_right, radial_front, radial_back, radial_top, radial_bottom)
 
@@ -93,26 +83,44 @@ def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
                 mean_radial_potential += radial_potential
                 mean_interaction += interaction
 
+    return mean_axion_kinetic, mean_axion_gradient, mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_interaction
+
+def compute_energy(s: AxionStrings.State, p: AxionStrings.Parameter):
+    a = AxionStrings.tau_to_a(s.tau)
+    H = AxionStrings.t_to_H(AxionStrings.tau_to_t(s.tau))
+
+    s.exchange_field()
+
+    theta = np.angle(s.psi)
+    radial = compute_radial_mode(s.psi, a)
+
+    mean_axion_kinetic, mean_axion_gradient, mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_interaction = \
+        compute_energy_local(s.lnx, s.lny, s.lnz, theta, radial, s.psi, s.psi_dot, a, H, p.dx)
+
     # sum all the subboxes
-    mean_axion_kinetic    = s.comm.Reduce(mean_axion_kinetic,    op=MPI.SUM, root=s.root)
-    mean_axion_gradient   = s.comm.Reduce(mean_axion_gradient,   op=MPI.SUM, root=s.root)
-    mean_radial_kinetic   = s.comm.Reduce(mean_radial_kinetic,   op=MPI.SUM, root=s.root)
-    mean_radial_gradient  = s.comm.Reduce(mean_radial_gradient,  op=MPI.SUM, root=s.root)
-    mean_radial_potential = s.comm.Reduce(mean_radial_potential, op=MPI.SUM, root=s.root)
-    mean_interaction      = s.comm.Reduce(mean_interaction,      op=MPI.SUM, root=s.root)
+    mean_axion_kinetic    = s.comm.reduce(mean_axion_kinetic,    op=MPI.SUM, root=s.root)
+    mean_axion_gradient   = s.comm.reduce(mean_axion_gradient,   op=MPI.SUM, root=s.root)
+    mean_radial_kinetic   = s.comm.reduce(mean_radial_kinetic,   op=MPI.SUM, root=s.root)
+    mean_radial_gradient  = s.comm.reduce(mean_radial_gradient,  op=MPI.SUM, root=s.root)
+    mean_radial_potential = s.comm.reduce(mean_radial_potential, op=MPI.SUM, root=s.root)
+    mean_interaction      = s.comm.reduce(mean_interaction,      op=MPI.SUM, root=s.root)
 
-    mean_axion_kinetic /= p.N**3
-    mean_axion_gradient /= p.N**3
-    mean_radial_kinetic /= p.N**3
-    mean_radial_gradient /= p.N**3
-    mean_radial_potential /= p.N**3
-    mean_interaction /= p.N**3
+    if s.rank == s.root:
+        mean_axion_kinetic /= p.N**3
+        mean_axion_gradient /= p.N**3
+        mean_radial_kinetic /= p.N**3
+        mean_radial_gradient /= p.N**3
+        mean_radial_potential /= p.N**3
+        mean_interaction /= p.N**3
 
-    mean_axion_total = mean_axion_kinetic + mean_axion_gradient
-    mean_radial_total = mean_radial_kinetic + mean_radial_gradient + mean_radial_potential
-    mean_total = mean_axion_total + mean_radial_total + mean_interaction
+        mean_axion_total = mean_axion_kinetic + mean_axion_gradient
+        mean_radial_total = mean_radial_kinetic + mean_radial_gradient + mean_radial_potential
+        mean_total = mean_axion_total + mean_radial_total + mean_interaction
 
-    return (mean_axion_kinetic, mean_axion_gradient, mean_axion_total,
-        mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_radial_total,
-        mean_interaction, mean_total)
+        return (mean_axion_kinetic, mean_axion_gradient, mean_axion_total,
+            mean_radial_kinetic, mean_radial_gradient, mean_radial_potential, mean_radial_total,
+            mean_interaction, mean_total)
+
+    else:
+        return None
 
