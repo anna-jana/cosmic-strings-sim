@@ -50,7 +50,8 @@ plt.ylabel(r"averaged interaction energy density $f_a^2 m_r^2$\n")
 plt.savefig("interaction_term.pdf")
 
 ################################################# string length and velocites #############################################
-mean_v, mean_v2, mean_gamma = np.loadtxt("velocities.dat", unpack=True)
+taus, mean_v, mean_v2, mean_gamma = np.loadtxt("velocities.dat", unpack=True)
+logs = AxionStrings.tau_to_log(taus)
 
 fig, axs = plt.subplots(3, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -65,16 +66,26 @@ axs[2].set_ylabel(r"$\langle \gamma \rangle$")
 
 plt.savefig("velocties.pdf")
 
-taus, zeta = np.loadtxt("string_length.dat", unpack=True)
+taus, l = np.loadtxt("string_length.dat", unpack=True)
+a = AxionStrings.tau_to_a(taus)
+t = AxionStrings.tau_to_t(taus)
 logs = AxionStrings.tau_to_log(taus)
 
+# string length parameter
+# conversion to physical units and factoring out the dilution from the expansion
+l_physical = a * dx * l
+V_Hubbel = (L * a)**3
+zetas = l_physical / V_Hubbel * t**2
+
+# string length pa
 plt.figure()
-plt.plot(logs, zeta)
+plt.semilogy(logs, zetas)
 plt.xlabel(r"$\log(m_r / H)$")
 plt.ylabel(r"$\zeta = a l / a^3 L^3 \times t^2$")
 plt.savefig("string_length.pdf")
 
 ############################################### emission spectra #####################################################
+exit()
 # compute the instanteous emission spectrum defined in the paper by gorghetto (axion strings: the attractive solution, eq. 33)
 def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
     # re interpolate such that P1 and P2 have a shared support
