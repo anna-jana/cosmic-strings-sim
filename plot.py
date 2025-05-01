@@ -2,90 +2,9 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+import AxionStrings
 
-def log_to_H(l): return 1.0 / np.exp(l)
-def H_to_t(H): return 1 / (2*H)
-def t_to_H(t): return 1 / (2*t)
-def H_to_log(H): return np.log(1/H)
-def t_to_tau(t): return -2*np.sqrt(t)
-def log_to_tau(log): return t_to_tau(H_to_t(log_to_H(log)))
-def t_to_a(t): return np.sqrt(t)
-def tau_to_t(tau): return -0.5*(tau)**2
-def tau_to_a(tau): return -0.5*tau
-def tau_to_log(tau): return H_to_log(t_to_H(tau_to_t(tau)))
-
-# string movie
-# function plot_strings(params :: AxionStrings.Parameter, strings; colors_different=False)
-#     fig = gcf()
-#     fig.add_subplot(projection="3d")
-#
-#     for string in strings
-#         xs = [string[1][1]]
-#         ys = [string[1][2]]
-#         zs = [string[1][3]]
-#         prev = string[1]
-#         color = nothing
-#
-#         for p in string[2:end]
-#             if norm(p .- prev) <= sqrt(3)
-#                 push!(xs, p[1])
-#                 push!(ys, p[2])
-#                 push!(zs, p[3])
-#             else
-#                 l, = plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
-#                 color = l.get_color()
-#                 xs = [p[1]]
-#                 ys = [p[2]]
-#                 zs = [p[3]]
-#             end
-#             prev = p
-#         end
-#
-#         if norm(string[1] - string[end]) <= sqrt(3)
-#             push!(xs, string[1][1])
-#             push!(ys, string[1][2])
-#             push!(zs, string[1][3])
-#         end
-#
-#         plot(xs .* params.dx, ys .* params.dx, zs .* params.dx, color=colors_different ? color : "tab:blue")
-#     end
-#
-#     xlabel(r"$x m_r$")
-#     ylabel(r"$y m_r$")
-#     zlabel(r"$z m_r$")
-#
-#     return nothing
-# end
-#
-# function make_string_movie(p :: AxionStrings.Parameter)
-#     tmpdir = tempname()
-#     mkdir(tmpdir)
-#     files = String[]
-#     strings = JSON.parse(read("strings.json", String))
-#     ioff()
-#
-#     println("plotting all frames")
-#     figure()
-#     for (i, (tau, any_strs)) in enumerate(strings)
-#         local strs = convert(Vector{Vector{SVector{3, Float64}}}, any_strs)
-#         println("$i of $(length(strings))")
-#         clf()
-#         plot_strings(p, strs; colors_different=False)
-#         title(r"$\tau =$" * (@sprintf "%.2f" tau) * r", $\log(m_r/H) = $" *
-#               (@sprintf "%.2f" AxionStrings.tau_to_log(tau)))
-#         fname = joinpath(tmpdir, "strings_step=$i.jpg")
-#         savefig(fname)
-#         push!(files, fname)
-#     end
-#
-#     plt.close("all")
-#     ion()
-#     println("creating gif")
-#     outfile = "strings.gif"
-#     run(Cmd(vcat(["convert", "-delay", "20", "-loop", "0"], files, outfile)))
-#     println("done")
-# end
-
+##################################################### parameter ######################################################
 with open("parameter.json", "r") as f:
     p = json.load(f)
     log_start = p["log_start"]
@@ -103,8 +22,9 @@ with open("parameter.json", "r") as f:
     nbins = p["nbins"]
     radius = p["radius"]
 
-tau, axion_kinetic, axion_gradient, axion_total, radial_kinetic, radial_gradient, radial_potential, radial_total, interaction, total = np.loadtxt("energies.dat")
-logs = tau_to_log(tau)
+############################################### different energy components ###############################################
+tau, axion_kinetic, axion_gradient, axion_total, radial_kinetic, radial_gradient, radial_potential, radial_total, interaction, total = np.loadtxt("energies.dat", unpack=True)
+logs = AxionStrings.tau_to_log(tau)
 
 plt.figure(figsize=(9, 3), constrained_layout=True)
 plt.plot(logs, axion_kinetic, color="tab:blue", ls=":", label="axion, kinetic")
@@ -114,10 +34,10 @@ plt.plot(logs, radial_kinetic, color="tab:orange", ls=":", label="radial, kineti
 plt.plot(logs, radial_gradient, color="tab:orange", ls="--", label="radial, gradient")
 plt.plot(logs, radial_potential, color="tab:orange", ls="-.", label="radial, potential")
 plt.plot(logs, radial_total, color="tab:orange", ls="-", label="radial")
-plt.plot(logs, interaction, color="tab:green", ls="-", label="interaction = strings")
+plt.plot(logs, -interaction, color="tab:green", ls="-", label="-interaction = strings")
 plt.plot(logs, total, color="black", ls="--", label="total energy density")
 plt.yscale("log")
-plt.xlim(plt.xlim()[1], 4.15)
+#plt.xlim(plt.xlim()[1], 4.15)
 plt.xlabel(r"$log(m_r / H)$")
 plt.ylabel(r"averaged energy density $f_a^2 m_r^2$\n")
 plt.legend()
@@ -129,7 +49,8 @@ plt.xlabel(r"$log(m_r / H)$")
 plt.ylabel(r"averaged interaction energy density $f_a^2 m_r^2$\n")
 plt.savefig("interaction_term.pdf")
 
-mean_v, mean_v2, mean_gamma = = np.loadtxt("velocities.dat" )
+################################################# string length and velocites #############################################
+mean_v, mean_v2, mean_gamma = np.loadtxt("velocities.dat", unpack=True)
 
 fig, axs = plt.subplots(3, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
@@ -144,8 +65,8 @@ axs[2].set_ylabel(r"$\langle \gamma \rangle$")
 
 plt.savefig("velocties.pdf")
 
-taus, zeta = np.loadtxt("string_length.dat")
-logs = tau_to_log(taus)
+taus, zeta = np.loadtxt("string_length.dat", unpack=True)
+logs = AxionStrings.tau_to_log(taus)
 
 plt.figure()
 plt.plot(logs, zeta)
@@ -153,16 +74,7 @@ plt.xlabel(r"$\log(m_r / H)$")
 plt.ylabel(r"$\zeta = a l / a^3 L^3 \times t^2$")
 plt.savefig("string_length.pdf")
 
-# k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack)
-# k2, P2_ppse, P2_uncorrected, P2_screened = = np.loadtxt("spectrum2.dat")
-k1, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
-k2, P2_screened = = np.loadtxt("spectrum2.dat", unpack=True)
-tau1 = p.Delta_tau * (p.nsteps - 1)
-tau2 = p.Delta_tau * p.nsteps
-
-log1 = tau_to_log(tau1)
-log2 = tau_to_log(tau2)
-
+############################################### emission spectra #####################################################
 # compute the instanteous emission spectrum defined in the paper by gorghetto (axion strings: the attractive solution, eq. 33)
 def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
     # re interpolate such that P1 and P2 have a shared support
@@ -174,13 +86,13 @@ def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
     P2_interp = interp1d(k2, P2)(ks)
 
     # compute time scales
-    t1 = tau_to_t(tau1)
-    t2 = tau_to_t(tau2)
-    a1 = tau_to_a(tau1)
-    a2 = tau_to_a(tau2)
+    t1 = AxionStrings.tau_to_t(tau1)
+    t2 = AxionStrings.tau_to_t(tau2)
+    a1 = AxionStrings.tau_to_a(tau1)
+    a2 = AxionStrings.tau_to_a(tau2)
     t_mid = (t2 + t1) / 2
-    a_mid = t_to_a(t_mid)
-    log_mid = tau_to_log(t_to_tau(t_mid))
+    a_mid = AxionStrings.t_to_a(t_mid)
+    log_mid = AxionStrings.tau_to_log(AxionStrings.t_to_tau(t_mid))
 
     # finite difference
     F = (a2**3 * P2_interp - a1**3 * P1_interp) / (t2 - t1) / a_mid**3
@@ -191,12 +103,20 @@ def compute_instanteous_emission_spectrum(P1, P2, k1, k2, tau1, tau2):
 
     return log_mid, ks, F
 
-log_mid, ks, F_ppse = compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
-_, _, F_screened = compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
-
 def normalize(ks, xs):
     norm = np.sqrt(np.sum(xs**2) * (ks[1] - ks[0]))
     return xs / norm
+
+k1, P1_ppse, P1_uncorrected, P1_screened = np.loadtxt("spectrum1.dat", unpack=True)
+k2, P2_ppse, P2_uncorrected, P2_screened = np.loadtxt("spectrum2.dat", unpack=True)
+
+tau1 = tau_start
+tau2 = tau_end
+log_mid, ks, F_ppse = compute_instanteous_emission_spectrum(P1_ppse, P2_ppse, k1, k2, tau1, tau2)
+_, _, F_screened = compute_instanteous_emission_spectrum(P1_screened, P2_screened, k1, k2, tau1, tau2)
+
+log1 = AxionStrings.tau_to_log(tau1)
+log2 = AxionStrings.tau_to_log(tau2)
 
 plt.figure()
 plt.plot(k1, normalize(k1, P1_ppse), label=f"ppse, log = {log1}")
